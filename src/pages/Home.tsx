@@ -197,9 +197,9 @@ export default function Home() {
             <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">News & Updates</h2>
           </div>
           <div className="space-y-4">
-            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-slate-500">
+            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-orange-500">
               <div className="flex items-start justify-between mb-2">
-                <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Coming Soon</span>
+                <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">Coming Soon</span>
               </div>
               <p className="text-slate-700 dark:text-slate-300">
                 Publisher for physical print version is currently being sorted out. Stay tuned for updates on availability.
@@ -316,3 +316,4 @@ export default function Home() {
     </div>
   );
 }
+
