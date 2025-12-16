@@ -7,10 +7,10 @@ async function generateVisitorId(): Promise<string> {
   const fingerprint = [
     navigator.userAgent,
     navigator.language,
-    new Date().getTimezoneOffset(),
-    screen.width,
-    screen.height,
-    screen.colorDepth,
+    String(new Date().getTimezoneOffset()),
+    String(screen.width),
+    String(screen.height),
+    String(screen.colorDepth),
   ].join('|');
 
   const msgBuffer = new TextEncoder().encode(fingerprint);
@@ -25,22 +25,18 @@ async function generateVisitorId(): Promise<string> {
 
 export async function trackVisitor(): Promise<void> {
   try {
-    // ✅ If Supabase isn't configured, don't do anything (and don't crash)
-    if (!supabase) {
-      console.warn('Supabase not configured; skipping visitor tracking.');
-      return;
-    }
+    if (!supabase) return; // Supabase not configured in this build → no-op
 
     const visitorId = await generateVisitorId();
 
-    const { data: existing, error: readError } = await supabase
+    const { data: existing, error: selectError } = await supabase
       .from('visitors')
       .select('id, visit_count')
       .eq('visitor_id', visitorId)
       .maybeSingle();
 
-    if (readError) {
-      console.error('Error reading visitor record:', readError);
+    if (selectError) {
+      console.error('Error checking visitor:', selectError);
       return;
     }
 
@@ -49,25 +45,22 @@ export async function trackVisitor(): Promise<void> {
         .from('visitors')
         .update({
           last_visit: new Date().toISOString(),
-          visit_count: existing.visit_count + 1,
+          visit_count: (existing.visit_count ?? 0) + 1,
         })
         .eq('visitor_id', visitorId);
 
-      if (updateError) {
-        console.error('Error updating visitor record:', updateError);
-      }
-    } else {
-      const { error: insertError } = await supabase.from('visitors').insert({
-        visitor_id: visitorId,
-        first_visit: new Date().toISOString(),
-        last_visit: new Date().toISOString(),
-        visit_count: 1,
-      });
-
-      if (insertError) {
-        console.error('Error inserting visitor record:', insertError);
-      }
+      if (updateError) console.error('Error updating visitor:', updateError);
+      return;
     }
+
+    const { error: insertError } = await supabase.from('visitors').insert({
+      visitor_id: visitorId,
+      first_visit: new Date().toISOString(),
+      last_visit: new Date().toISOString(),
+      visit_count: 1,
+    });
+
+    if (insertError) console.error('Error inserting visitor:', insertError);
   } catch (error) {
     console.error('Error tracking visitor:', error);
   }
@@ -75,7 +68,6 @@ export async function trackVisitor(): Promise<void> {
 
 export async function getVisitorCount(): Promise<number> {
   try {
-    // ✅ If Supabase isn't configured, return 0 (and don't crash)
     if (!supabase) return 0;
 
     const { data, error } = await supabase
