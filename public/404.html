@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex" />
+    <script>
+      // GitHub Pages serves 404.html for unknown paths like /blog.
+      // Convert /blog -> /#/blog so HashRouter can render it.
+      (function () {
+        var l = window.location;
+        // keep pathname (e.g. /blog), query (?x=1), and hash (usually empty here)
+        var target = l.origin + "/#" + l.pathname + l.search + l.hash;
+        l.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
