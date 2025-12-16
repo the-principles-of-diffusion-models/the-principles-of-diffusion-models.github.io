@@ -28,7 +28,7 @@ export default function TeachingGuide() {
             <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed">
               A concise walkthrough from the change-of-variable perspective (not covering the full intuitions or insights developed in the book) is also available as our{" "}  
               <a href="https://the-principles-of-diffusion-models.github.io/#/blog" className="text-orange-400 hover:text-orange-500 dark:text-orange-300 dark:hover:text-orange-400"> blog post
-              </a>
+              </a>.
             </p>
           </header>
 
@@ -129,6 +129,7 @@ export default function TeachingGuide() {
     </div>
   );
 }
+
 
 
 
