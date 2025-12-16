@@ -1,0 +1,9 @@
+This is a placeholder file indicating where you can place an actual image.
+
+For the forward process diagram, you would replace this with an actual image file such as:
+- forward-process-diagram.png
+- forward-process.gif
+- diffusion-visualization.png
+
+To use the image in the blog post, you would reference it as:
+<img src="/assets/forward-process-diagram.png" alt="Forward diffusion process visualization" />
