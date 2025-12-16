@@ -29,7 +29,11 @@ jobs:
       # If npm ci fails because you DON'T have package-lock.json,
       # replace the line above with:  - run: npm install
 
+      # ✅ IMPORTANT: pass Supabase env vars into the Vite build
       - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       # Prevent Jekyll from interfering (safe to include)
       - run: touch dist/.nojekyll
