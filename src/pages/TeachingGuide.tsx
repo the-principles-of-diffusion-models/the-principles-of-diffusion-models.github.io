@@ -25,8 +25,8 @@ export default function TeachingGuide() {
             <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed">
               A practical guide for instructors who want to teach diffusion models from our monograph without having to read every chapter in advance. The main idea is to teach diffusion as one coherent framework, then emphasize why sampling is ODE solving, how guidance works, and why the field is moving toward flow map models.
             </p>
-            <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300">
-              A concise walkthrough from a different perspective (not covering the full intuitions or insights developed in the book) is also available as our 
+            <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed">
+              A concise walkthrough from the change-of-variable perspective (not covering the full intuitions or insights developed in the book) is also available as our  
               <a href="https://the-principles-of-diffusion-models.github.io/#/blog" className="text-orange-400 hover:text-orange-500 dark:text-orange-300 dark:hover:text-orange-400">
                 blog post
               </a>
@@ -130,4 +130,5 @@ export default function TeachingGuide() {
     </div>
   );
 }
+
 
