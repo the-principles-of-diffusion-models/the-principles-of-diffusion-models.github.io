@@ -26,9 +26,15 @@ export default function CommentsSection() {
 
   useEffect(() => {
     fetchComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchComments = async () => {
+    if (!supabase) {
+      setComments([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('comments')
       .select('*')
@@ -37,10 +43,12 @@ export default function CommentsSection() {
 
     if (error) {
       console.error('Error fetching comments:', error);
-    } else {
-      const commentTree = buildCommentTree(data || []);
-      setComments(commentTree);
+      setComments([]);
+      return;
     }
+
+    const commentTree = buildCommentTree((data ?? []) as Comment[]);
+    setComments(commentTree);
   };
 
   const buildCommentTree = (flatComments: Comment[]): CommentWithReplies[] => {
@@ -55,16 +63,16 @@ export default function CommentsSection() {
       const commentWithReplies = commentMap.get(comment.id)!;
       if (comment.parent_id) {
         const parent = commentMap.get(comment.parent_id);
-        if (parent) {
-          parent.replies.push(commentWithReplies);
-        }
+        if (parent) parent.replies.push(commentWithReplies);
       } else {
         rootComments.push(commentWithReplies);
       }
     });
 
     rootComments.forEach((comment) => {
-      comment.replies.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      comment.replies.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
     });
 
     return rootComments;
@@ -79,6 +87,12 @@ export default function CommentsSection() {
       return;
     }
 
+    if (!supabase) {
+      setSubmitMessage('Comments are disabled (database not configured).');
+      setTimeout(() => setSubmitMessage(''), 5000);
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitMessage('');
 
@@ -88,34 +102,46 @@ export default function CommentsSection() {
       parent_id: parentId,
     };
 
-    const { error } = await supabase.from('comments').insert(commentData);
+    try {
+      const { error } = await supabase.from('comments').insert(commentData);
 
-    if (error) {
-      console.error('Error submitting comment:', error);
-      setSubmitMessage('Failed to submit comment. Please try again.');
-    } else {
+      if (error) {
+        console.error('Error submitting comment:', error);
+        setSubmitMessage('Failed to submit comment. Please try again.');
+        return;
+      }
+
       setSubmitMessage('Comment posted successfully!');
       setAuthorName('');
       setContent('');
       setReplyingTo(null);
-      fetchComments();
 
-      sendEmailNotification(commentData);
+      await fetchComments();
+
+      // fire-and-forget; won't crash the UI even if it fails
+      void sendEmailNotification(commentData);
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => setSubmitMessage(''), 5000);
     }
-
-    setIsSubmitting(false);
-    setTimeout(() => setSubmitMessage(''), 5000);
   };
 
-  const sendEmailNotification = async (commentData: { author_name: string; content: string; parent_id: string | null }) => {
+  const sendEmailNotification = async (commentData: {
+    author_name: string;
+    content: string;
+    parent_id: string | null;
+  }) => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+      // ✅ If not configured, do nothing (don’t throw, don’t fetch)
+      if (!supabaseUrl || !supabaseAnonKey) return;
+
       await fetch(`${supabaseUrl}/functions/v1/notify-comment`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          Authorization: `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(commentData),
@@ -142,11 +168,9 @@ export default function CommentsSection() {
     let key = 0;
 
     const blockMathRegex = /\$\$([\s\S]*?)\$\$/g;
-    const inlineMathRegex = /\$((?!\$)[\s\S]*?)\$/g;
-
-    let blockMatch;
     const blockMatches: Array<{ index: number; length: number; content: string }> = [];
 
+    let blockMatch;
     while ((blockMatch = blockMathRegex.exec(text)) !== null) {
       blockMatches.push({
         index: blockMatch.index,
@@ -155,12 +179,10 @@ export default function CommentsSection() {
       });
     }
 
-    const processedRanges: Array<{ start: number; end: number }> = [];
-
     blockMatches.forEach((match) => {
       if (lastIndex < match.index) {
         const textBefore = text.substring(lastIndex, match.index);
-        processInlineMatches(textBefore, lastIndex);
+        processInlineMatches(textBefore);
       }
 
       parts.push(
@@ -169,22 +191,23 @@ export default function CommentsSection() {
         </div>
       );
 
-      processedRanges.push({ start: match.index, end: match.index + match.length });
       lastIndex = match.index + match.length;
     });
 
     if (lastIndex < text.length) {
-      processInlineMatches(text.substring(lastIndex), lastIndex);
+      processInlineMatches(text.substring(lastIndex));
     }
 
-    function processInlineMatches(str: string, offset: number) {
+    function processInlineMatches(str: string) {
       let inlineLastIndex = 0;
       let inlineMatch;
       const inlineRegex = /\$((?!\$)[^\$]*?)\$/g;
 
       while ((inlineMatch = inlineRegex.exec(str)) !== null) {
         if (inlineLastIndex < inlineMatch.index) {
-          parts.push(<span key={key++}>{str.substring(inlineLastIndex, inlineMatch.index)}</span>);
+          parts.push(
+            <span key={key++}>{str.substring(inlineLastIndex, inlineMatch.index)}</span>
+          );
         }
 
         parts.push(<InlineMath key={key++} math={inlineMatch[1]} />);
@@ -196,7 +219,7 @@ export default function CommentsSection() {
       }
     }
 
-    return parts.length > 0 ? <>{parts}</> : text;
+    return parts.length > 0 ? <>{parts}</> : <>{text}</>;
   };
 
   const renderComment = (comment: CommentWithReplies, depth: number = 0) => {
@@ -209,9 +232,11 @@ export default function CommentsSection() {
             <span className="font-semibold text-slate-800">{comment.author_name}</span>
             <span className="text-xs text-slate-500">{formatDate(comment.created_at)}</span>
           </div>
+
           <div className="text-slate-700 whitespace-pre-wrap mb-2">
             {renderMathContent(comment.content)}
           </div>
+
           <button
             onClick={() => setReplyingTo(isReplying ? null : comment.id)}
             className="flex items-center gap-1 text-xs text-orange-400 hover:text-orange-400 font-medium"
@@ -258,19 +283,14 @@ export default function CommentsSection() {
         </div>
 
         {comment.replies.length > 0 && (
-          <div className="mt-2">
-            {comment.replies.map((reply) => renderComment(reply, depth + 1))}
-          </div>
+          <div className="mt-2">{comment.replies.map((r) => renderComment(r, depth + 1))}</div>
         )}
       </div>
     );
   };
 
-  const totalCommentCount = (comments: CommentWithReplies[]): number => {
-    return comments.reduce((count, comment) => {
-      return count + 1 + totalCommentCount(comment.replies);
-    }, 0);
-  };
+  const totalCommentCount = (cs: CommentWithReplies[]): number =>
+    cs.reduce((count, c) => count + 1 + totalCommentCount(c.replies), 0);
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
@@ -298,7 +318,8 @@ export default function CommentsSection() {
 
           <div>
             <label htmlFor="content" className="block text-sm font-medium text-slate-700 mb-2">
-              Comment * <span className="text-xs text-slate-500">(supports LaTeX: $inline$ or $$block$$)</span>
+              Comment *{' '}
+              <span className="text-xs text-slate-500">(supports LaTeX: $inline$ or $$block$$)</span>
             </label>
             <textarea
               id="content"
@@ -346,9 +367,7 @@ export default function CommentsSection() {
             No comments yet. Be the first to share your thoughts!
           </p>
         ) : (
-          <div className="space-y-4">
-            {comments.map((comment) => renderComment(comment))}
-          </div>
+          <div className="space-y-4">{comments.map((c) => renderComment(c))}</div>
         )}
       </div>
     </div>

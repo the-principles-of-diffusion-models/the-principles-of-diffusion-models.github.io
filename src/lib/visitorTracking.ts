@@ -25,29 +25,48 @@ async function generateVisitorId(): Promise<string> {
 
 export async function trackVisitor(): Promise<void> {
   try {
+    // ✅ If Supabase isn't configured, don't do anything (and don't crash)
+    if (!supabase) {
+      console.warn('Supabase not configured; skipping visitor tracking.');
+      return;
+    }
+
     const visitorId = await generateVisitorId();
 
-    const { data: existing } = await supabase
+    const { data: existing, error: readError } = await supabase
       .from('visitors')
       .select('id, visit_count')
       .eq('visitor_id', visitorId)
       .maybeSingle();
 
+    if (readError) {
+      console.error('Error reading visitor record:', readError);
+      return;
+    }
+
     if (existing) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('visitors')
         .update({
           last_visit: new Date().toISOString(),
           visit_count: existing.visit_count + 1,
         })
         .eq('visitor_id', visitorId);
+
+      if (updateError) {
+        console.error('Error updating visitor record:', updateError);
+      }
     } else {
-      await supabase.from('visitors').insert({
+      const { error: insertError } = await supabase.from('visitors').insert({
         visitor_id: visitorId,
         first_visit: new Date().toISOString(),
         last_visit: new Date().toISOString(),
         visit_count: 1,
       });
+
+      if (insertError) {
+        console.error('Error inserting visitor record:', insertError);
+      }
     }
   } catch (error) {
     console.error('Error tracking visitor:', error);
@@ -56,10 +75,18 @@ export async function trackVisitor(): Promise<void> {
 
 export async function getVisitorCount(): Promise<number> {
   try {
-    const { data } = await supabase
+    // ✅ If Supabase isn't configured, return 0 (and don't crash)
+    if (!supabase) return 0;
+
+    const { data, error } = await supabase
       .from('site_stats')
       .select('unique_visitors')
       .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching visitor count:', error);
+      return 0;
+    }
 
     return data?.unique_visitors ?? 0;
   } catch (error) {
