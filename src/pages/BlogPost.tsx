@@ -354,7 +354,7 @@ export default function BlogPost() {
                 >
                   Chapter 2
                 </a>
-                for how classic VAEs connect to the variational (DDPM) perspective on diffusion models.
+                {" "}for how classic VAEs connect to the variational (DDPM) perspective on diffusion models.
               </p>
 
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
@@ -455,7 +455,7 @@ export default function BlogPost() {
                 >
                   Chapter 3
                 </a>
-                and{" "}
+                {" "}and{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=91"
                   target="_blank"
