@@ -844,6 +844,18 @@ export default function BlogPost() {
 
               <BlockMath math="\Psi_{s\to t}(\mathbf{x}_s) = \mathbf{x}_s+\int_s^t \mathbf{v}\bigl(\mathbf{x}(u),u\bigr)\,\mathrm{d}u." />
 
+              <div className="mb-3">
+                <img
+                  src="/assets/flow-map.svg"
+                  alt="Flow map visualization"
+                  className="block w-full h-auto"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
+
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 It answers one concrete question: <em>starting from the current noisy state, where would the ideal dynamics place me at a later time?</em> Standard samplers approximate this jump by chaining many tiny solver steps. A flow map model tries to learn the jump <em>directly</em>:
               </p>
@@ -978,6 +990,18 @@ export default function BlogPost() {
 
               <BlockMath math="\Psi_{s\to t} \;=\; \Psi_{u\to t}\circ \Psi_{s\to u}." />
 
+              <div className="mb-3">
+                <img
+                  src="/assets/semigroup.svg"
+                  alt="Semigroup property visualization"
+                  className="block w-full h-auto"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
+
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 So CTM enforces the same idea with its learned map: a <em>big jump</em> should agree with <em>two smaller jumps</em> stitched at <InlineMath math="u" />. Since the oracle maps are unavailable, CTM uses a stop-gradient self-target:
               </p>
@@ -995,6 +1019,18 @@ export default function BlogPost() {
               </p>
 
               <BlockMath math="\Psi_{s\to u}(\mathbf{x}_s) \approx \text{few solver steps using } \mathbf{g}_\theta(\cdot,s,s) \text{ from } s \text{ to } u." />
+
+              <div className="mb-3">
+                <img
+                  src="/assets/ctm-target.svg"
+                  alt="CTM visualization"
+                  className="block w-full h-auto"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
 
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Mean Flow (MF)
