@@ -130,7 +130,7 @@ export default function BlogPost() {
                 </p>
                 <div className="bg-white dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-700 mb-3">
                   <img
-                    src="/assets/example-image.png"
+                    src="/assets/vdm-forward.svg"
                     alt="Forward diffusion process visualization"
                     className="w-full rounded shadow-sm"
                     onError={(e) => {
