@@ -581,7 +581,7 @@ export default function BlogPost() {
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Building on the key insight from Score SDE that diffusion sampling is essentially solving differential
-                equations, we can adapt classical numerical ODE solvers to the probability-flow ODE (PF-ODE) structure.
+                equations, we can adapt classical numerical ODE solvers to the PF-ODE structure.
                 Read more in{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=259"
@@ -592,7 +592,7 @@ export default function BlogPost() {
                   Chapter 9
                 </a>
                 , where we cover a range of more sophisticated solvers. Moreover, from the ODE-based viewpoint, sampling
-                can be steered by taking linear combinations of vector fields (e.g., CFG/CG); see{" "}
+                can be steered by taking linear combinations of vector fields (e.g., classifier-guidance/classifier-free guidance); see{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=231"
                   target="_blank"
