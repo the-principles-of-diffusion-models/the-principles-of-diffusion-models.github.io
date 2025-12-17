@@ -270,7 +270,7 @@ export default function BlogPost() {
                 To make the generative process work, we would like to learn the true reverse kernel <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" />, by fitting a parametric model <InlineMath math="p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" /> and minimizing the expected KL
               </p>
 
-              <BlockMath math="\mathbb{E}_{p_t(\mathbf{x}_t)} \big[ D_{\mathrm{KL}}\big(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\big) \big]." />
+              <BlockMath math="\mathbb{E}_{p_t(\mathbf{x}_t)} \big[ \mathcal{D}_{\mathrm{KL}}\big(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\big) \big]." />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 At first sight, this looks hopeless: the marginal reverse kernel
@@ -291,7 +291,7 @@ export default function BlogPost() {
               </p>
 
               <div className="bg-orange-50 border-2 border-orange-100 rounded-lg p-6 my-6 overflow-x-auto">
-                <BlockMath math="\mathbb{E}_{p_t(\mathbf{x}_t)}\!\big[ D_{\mathrm{KL}}(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)) \big] = \mathbb{E}_{p_{\text{data}}(\mathbf{x}_0)}\mathbb{E}_{p(\mathbf{x}_t\mid \mathbf{x}_0)} \big[ D_{\mathrm{KL}}(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t,\mathbf{x}_0)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)) \big] + C," />
+                <BlockMath math="\mathbb{E}_{p_t(\mathbf{x}_t)}\!\big[ \mathcal{D}_{\mathrm{KL}}(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)) \big] = \mathbb{E}_{p_{\text{data}}(\mathbf{x}_0)}\mathbb{E}_{p(\mathbf{x}_t\mid \mathbf{x}_0)} \big[ \mathcal{D}_{\mathrm{KL}}(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t,\mathbf{x}_0)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)) \big] + C," />
               </div>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
