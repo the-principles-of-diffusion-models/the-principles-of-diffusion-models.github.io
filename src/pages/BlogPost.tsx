@@ -580,7 +580,9 @@ export default function BlogPost() {
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                In{" "}
+                Building on the key insight from Score SDE that diffusion sampling is essentially solving differential
+                equations, we can adapt classical numerical ODE solvers to the probability-flow ODE (PF-ODE) structure.
+                Read more in{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=259"
                   target="_blank"
@@ -589,8 +591,19 @@ export default function BlogPost() {
                 >
                   Chapter 9
                 </a>
-                ,{" "}for how classic normalizing flows connect to the flow-based (flow matching) perspective on diffusion models.
+                , where we cover a range of more sophisticated solvers. Moreover, from the ODE-based viewpoint, sampling
+                can be steered by taking linear combinations of vector fields (e.g., CFG/CG); see{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=231"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  Chapter 8
+                </a>
+                .
               </p>
+
 
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Three Lenses on the Same Diffusion Path
