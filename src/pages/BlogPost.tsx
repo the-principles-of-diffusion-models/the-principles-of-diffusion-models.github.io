@@ -108,7 +108,7 @@ export default function BlogPost() {
                   rel="noopener noreferrer"
                   className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
                 >
-                  chapter 1
+                  Chapter 1
                 </a>
                 .
               </p>
@@ -344,6 +344,19 @@ export default function BlogPost() {
                 At sampling time, we start from <InlineMath math="\mathbf{x}_T\sim\mathcal{N}(\mathbf{0},\mathbf{I})" />. At each step, we use <InlineMath math="\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)" /> to compute the Gaussian mean <InlineMath math="\boldsymbol{\mu}_\theta(\mathbf{x}_t,t)" /> (via the closed-form reverse formula), sample <InlineMath math="\mathbf{x}_{t-1}" />, and repeat until we reach a clean sample <InlineMath math="\mathbf{x}_0" />.
               </p>
 
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Read more in{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=37"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  Chapter 2
+                </a>
+                for how classic VAEs connect to the variational (DDPM) perspective on diffusion models.
+              </p>
+
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Score-Based Methods: Predict the Score
               </h4>
@@ -430,6 +443,28 @@ export default function BlogPost() {
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 This viewpoint also makes one practical point transparent: <em>standard diffusion sampling is inherently iterative, and can therefore be slow</em>. The sample is refined through many small updates, and high quality often requires many such steps.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Read more in{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=61"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  Chapter 3
+                </a>
+                and{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=91"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  Chapter 4
+                </a>                
+                for how classic energy-based methods connect to score-based diffusion models and the continuous-time differential-equation framework.
               </p>
 
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
