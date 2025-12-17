@@ -398,6 +398,18 @@ export default function BlogPost() {
                 Starting from a seed drawn from the prior, <InlineMath math="\mathbf{x}_T\sim p_{\text{prior}}" />, we numerically integrate the PF-ODE backward from <InlineMath math="t=T" /> to <InlineMath math="t=0" />. The endpoint <InlineMath math="\mathbf{x}_0" /> is then a data-like sample.
               </p>
 
+              <div className="mb-3">
+                <img
+                  src="/assets/continuous_ode.svg"
+                  alt="ODE flow visualization"
+                  className="block w-full h-auto"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
+
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 The score SDE framework can be viewed as a <em>continuous-time</em> extension of DDPM. It reframes diffusion generation as solving a time-dependent differential equation, which connects generative modeling to classical tools from differential equations.
               </p>
@@ -733,6 +745,18 @@ export default function BlogPost() {
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
                 That "more in than out" statement is exactly what the <InlineMath math="-\nabla\!\cdot \mathbf{J}_{\text{adv}}" /> term encodes.
               </p>
+
+              <div className="mb-3">
+                <img
+                  src="/assets/fokker_planck_gmm_to_equilibrium.gif"
+                  alt="Continuity equation visualization"
+                  className="block w-full h-auto"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
 
               <h3 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mt-8 mb-4">
                 Enter the Noise
