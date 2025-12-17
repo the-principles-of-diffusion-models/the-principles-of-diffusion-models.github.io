@@ -100,7 +100,7 @@ export default function BlogPost() {
                 Classical models such as GANs and VAEs attempt to learn this arrow in one or a few large steps: a single neural network takes a noise vector and outputs an image.
               </p>
 
-              <p>
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Read more in{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=20"
