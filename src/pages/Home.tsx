@@ -173,7 +173,7 @@ export default function Home() {
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Feather className="w-6 h-6 text-orange-400" />
-            <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Abstract</h2>
+            <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">About This Book</h2>
           </div>
           <div className="text-slate-700 dark:text-slate-300 leading-relaxed space-y-4">
             <p>
