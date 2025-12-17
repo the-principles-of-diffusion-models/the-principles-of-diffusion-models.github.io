@@ -516,7 +516,8 @@ export default function BlogPost() {
               <BlockMath math="\frac{\mathrm{d}\mathbf{x}(t)}{\mathrm{d}t}=\mathbf{v}_\theta(\mathbf{x}(t),t), \qquad t:T\to 0," />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                to obtain a data-like <InlineMath math="\mathbf{x}_0" />. 
+                to obtain a data-like <InlineMath math="\mathbf{x}_0" />.
+              </p> 
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Read more in{" "}
