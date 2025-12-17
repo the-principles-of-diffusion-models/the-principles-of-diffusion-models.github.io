@@ -10,6 +10,7 @@ interface CommentRow {
   content: string;
   created_at: string;
   parent_id: string | null;
+
   // optional fields we compute client-side:
   upvotes?: number;
   downvotes?: number;
@@ -40,7 +41,7 @@ export default function CommentsSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // If someone opens a shared link like /#/?comment=<id>, scroll + highlight once comments load.
+  // If someone opens a shared link like /#/?comment=, scroll + highlight once comments load.
   useEffect(() => {
     const targetId = getCommentIdFromUrl();
     if (!targetId) return;
@@ -57,7 +58,7 @@ export default function CommentsSection() {
   }, [comments]);
 
   function getCommentIdFromUrl(): string | null {
-    // HashRouter URL looks like: https://.../#/?comment=<uuid>
+    // HashRouter URL looks like: https://.../#/?comment=
     const hash = window.location.hash || '';
     const qIndex = hash.indexOf('?');
     const queryString = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
@@ -215,7 +216,7 @@ export default function CommentsSection() {
 
     if (error) {
       console.error('Error submitting comment:', error);
-      setSubmitMessage('Failed to submit comment. Please try again.');
+      setSubmitMessage('Failed to submit comment.\nPlease try again.');
     } else {
       setSubmitMessage('Comment posted successfully!');
       setAuthorName('');
@@ -264,13 +265,12 @@ export default function CommentsSection() {
   };
 
   const renderMathContent = (text: string) => {
-    const parts: JSX.Element[] = [];
+    const parts: (string | JSX.Element)[] = [];
     let lastIndex = 0;
     let key = 0;
 
     const blockMathRegex = /\$\$([\s\S]*?)\$\$/g;
-
-    let blockMatch;
+    let blockMatch: RegExpExecArray | null;
     const blockMatches: Array<{ index: number; length: number; content: string }> = [];
 
     while ((blockMatch = blockMathRegex.exec(text)) !== null) {
@@ -286,12 +286,7 @@ export default function CommentsSection() {
         processInlineMatches(text.substring(lastIndex, match.index));
       }
 
-      parts.push(
-        <div key={key++} className="my-2">
-          <BlockMath math={match.content} />
-        </div>
-      );
-
+      parts.push(<BlockMath key={`block-${key++}`}>{match.content}</BlockMath>);
       lastIndex = match.index + match.length;
     });
 
@@ -301,20 +296,20 @@ export default function CommentsSection() {
 
     function processInlineMatches(str: string) {
       let inlineLastIndex = 0;
-      let inlineMatch;
+      let inlineMatch: RegExpExecArray | null;
       const inlineRegex = /\$((?!\$)[^\$]*?)\$/g;
 
       while ((inlineMatch = inlineRegex.exec(str)) !== null) {
         if (inlineLastIndex < inlineMatch.index) {
-          parts.push(<span key={key++}>{str.substring(inlineLastIndex, inlineMatch.index)}</span>);
+          parts.push(str.substring(inlineLastIndex, inlineMatch.index));
         }
 
-        parts.push(<InlineMath key={key++} math={inlineMatch[1]} />);
+        parts.push(<InlineMath key={`inline-${key++}`}>{inlineMatch[1]}</InlineMath>);
         inlineLastIndex = inlineMatch.index + inlineMatch[0].length;
       }
 
       if (inlineLastIndex < str.length) {
-        parts.push(<span key={key++}>{str.substring(inlineLastIndex)}</span>);
+        parts.push(str.substring(inlineLastIndex));
       }
     }
 
@@ -323,7 +318,7 @@ export default function CommentsSection() {
 
   function buildShareUrl(commentId: string): string {
     // Always share the HOME route with a query in the hash:
-    // https://.../#/?comment=<id>
+    // https://.../#/?comment=
     const base = `${window.location.origin}${window.location.pathname}`;
     return `${base}#/?comment=${encodeURIComponent(commentId)}`;
   }
@@ -383,10 +378,7 @@ export default function CommentsSection() {
         // upsert new reaction
         const { error } = await supabase
           .from('comment_reactions')
-          .upsert(
-            { comment_id: commentId, visitor_id: visitorId, reaction },
-            { onConflict: 'comment_id,visitor_id' }
-          );
+          .upsert({ comment_id: commentId, visitor_id: visitorId, reaction }, { onConflict: 'comment_id,visitor_id' });
 
         if (error) console.error('Error upserting reaction:', error);
       }
@@ -422,23 +414,19 @@ export default function CommentsSection() {
     const isHighlighted = highlightCommentId === comment.id;
 
     return (
-      <div
-        key={comment.id}
-        id={`comment-${comment.id}`}
-        className={`${depth > 0 ? 'ml-8 mt-3' : ''}`}
-      >
+      <div key={comment.id} id={`comment-${comment.id}`} className={`${depth > 0 ? 'ml-8 mt-3' : ''}`}>
         <div
           className={[
-            'bg-slate-50 rounded-lg p-4 border border-slate-200',
-            isHighlighted ? 'ring-2 ring-orange-300' : '',
+            'bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border border-slate-200 dark:border-slate-600',
+            isHighlighted ? 'ring-2 ring-orange-300 dark:ring-orange-400' : '',
           ].join(' ')}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="font-semibold text-slate-800">{comment.author_name}</span>
-            <span className="text-xs text-slate-500">{formatDate(comment.created_at)}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-100">{comment.author_name}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{formatDate(comment.created_at)}</span>
           </div>
 
-          <div className="text-slate-700 whitespace-pre-wrap mb-3">
+          <div className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap mb-3">
             {renderMathContent(comment.content)}
           </div>
 
@@ -458,8 +446,8 @@ export default function CommentsSection() {
               disabled={reactingCommentId === comment.id}
               onClick={() => handleReaction(comment.id, 1)}
               className={`flex items-center gap-1 text-xs font-medium ${
-                mine === 1 ? 'text-green-700' : 'text-slate-600'
-              } hover:text-green-700 disabled:opacity-50`}
+                mine === 1 ? 'text-green-700 dark:text-green-400' : 'text-slate-600 dark:text-slate-300'
+              } hover:text-green-700 dark:hover:text-green-400 disabled:opacity-50`}
               title="Thumbs up"
             >
               <ThumbsUp className="w-3.5 h-3.5" />
@@ -471,8 +459,8 @@ export default function CommentsSection() {
               disabled={reactingCommentId === comment.id}
               onClick={() => handleReaction(comment.id, -1)}
               className={`flex items-center gap-1 text-xs font-medium ${
-                mine === -1 ? 'text-red-700' : 'text-slate-600'
-              } hover:text-red-700 disabled:opacity-50`}
+                mine === -1 ? 'text-red-700 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'
+              } hover:text-red-700 dark:hover:text-red-400 disabled:opacity-50`}
               title="Thumbs down"
             >
               <ThumbsDown className="w-3.5 h-3.5" />
@@ -482,7 +470,7 @@ export default function CommentsSection() {
             <button
               type="button"
               onClick={() => handleShare(comment.id)}
-              className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 font-medium"
+              className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 font-medium"
               title="Copy/share link to this comment"
             >
               {copiedCommentId === comment.id ? (
@@ -500,16 +488,13 @@ export default function CommentsSection() {
           </div>
 
           {isReplying && (
-            <form
-              onSubmit={(e) => handleSubmit(e, comment.id)}
-              className="mt-3 space-y-3 border-t border-slate-300 pt-3"
-            >
+            <form onSubmit={(e) => handleSubmit(e, comment.id)} className="mt-3 space-y-3 border-t border-slate-300 dark:border-slate-600 pt-3">
               <input
                 type="text"
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 placeholder="Name (optional)"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                 maxLength={100}
               />
               <textarea
@@ -517,12 +502,12 @@ export default function CommentsSection() {
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Write a reply... (supports LaTeX: $inline$ or $$block$$)"
                 rows={3}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none"
                 maxLength={5000}
                 required
               />
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-500">{content.length}/5000 characters</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{content.length}/5000 characters</p>
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -536,24 +521,22 @@ export default function CommentsSection() {
           )}
         </div>
 
-        {comment.replies.length > 0 && (
-          <div className="mt-2">{comment.replies.map((r) => renderComment(r, depth + 1))}</div>
-        )}
+        {comment.replies.length > 0 && <div className="mt-2">{comment.replies.map((r) => renderComment(r, depth + 1))}</div>}
       </div>
     );
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8">
       <div className="flex items-center gap-3 mb-6">
         <MessageSquare className="w-6 h-6 text-orange-400" />
-        <h2 className="text-2xl font-semibold text-slate-800">Discussion & Feedback</h2>
+        <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Discussion & Feedback</h2>
       </div>
 
       <form onSubmit={(e) => handleSubmit(e, null)} className="mb-8">
         <div className="space-y-4">
           <div>
-            <label htmlFor="authorName" className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="authorName" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Name (optional)
             </label>
             <input
@@ -562,14 +545,14 @@ export default function CommentsSection() {
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
               placeholder="Anonymous"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
               maxLength={100}
             />
           </div>
 
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-slate-700 mb-2">
-              Comment * <span className="text-xs text-slate-500">(supports LaTeX: $inline$ or $$block$$)</span>
+            <label htmlFor="content" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Comment * <span className="text-xs text-slate-500 dark:text-slate-400">(supports LaTeX: $inline$ or $$block$$)</span>
             </label>
             <textarea
               id="content"
@@ -577,11 +560,11 @@ export default function CommentsSection() {
               onChange={(e) => setContent(e.target.value)}
               placeholder="Share your thoughts, questions, or feedback... Use $x^2$ for inline math or $$\int_0^1 x^2 dx$$ for block math."
               rows={4}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none"
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none"
               maxLength={5000}
               required
             />
-            <p className="text-xs text-slate-500 mt-1">{content.length}/5000 characters</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{content.length}/5000 characters</p>
           </div>
 
           <div className="flex items-center justify-between">
@@ -595,11 +578,7 @@ export default function CommentsSection() {
             </button>
 
             {submitMessage && (
-              <p
-                className={`text-sm ${
-                  submitMessage.includes('success') ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
+              <p className={`text-sm ${submitMessage.includes('success') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {submitMessage}
               </p>
             )}
@@ -607,11 +586,15 @@ export default function CommentsSection() {
         </div>
       </form>
 
-      <div className="border-t border-slate-200 pt-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">Comments ({totalCommentCount})</h3>
+      <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">
+          Comments ({totalCommentCount})
+        </h3>
 
         {comments.length === 0 ? (
-          <p className="text-slate-500 text-center py-8">No comments yet. Be the first to share your thoughts!</p>
+          <p className="text-slate-500 dark:text-slate-400 text-center py-8">
+            No comments yet. Be the first to share your thoughts!
+          </p>
         ) : (
           <div className="space-y-4">{comments.map((c) => renderComment(c))}</div>
         )}
