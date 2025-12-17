@@ -121,26 +121,15 @@ export default function BlogPost() {
                 It helps to first make the <em>forward noising rule</em> completely concrete. Modern common diffusion models (such as DDPM, Score SDE, Flow Matching) that we will revisit in this post all start from this same basic construction.
               </p>
 
-              <div className="my-8 bg-slate-50 dark:bg-slate-800 p-6 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600">
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 font-semibold">
-                  📸 Example: Inserting an Image or Figure
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                  To add images, place your files in <code className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded text-xs">/public/assets/</code> and reference them like this:
-                </p>
-                <div className="bg-white dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-700 mb-3">
-                  <img
-                    src="/assets/vdm-forward.svg"
-                    alt="Forward diffusion process visualization"
-                    className="w-full rounded shadow-sm"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                  {'<img src="/assets/your-image.png" alt="Description" className="w-full rounded" />'}
-                </p>
+              <div className="bg-white dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-700 mb-3">
+                <img
+                  src="/assets/vdm-forward.svg"
+                  alt="Forward diffusion process visualization"
+                  className="w-full rounded shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
               </div>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
