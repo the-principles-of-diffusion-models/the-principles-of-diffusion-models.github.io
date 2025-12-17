@@ -1,0 +1,37 @@
+/* ==========================================================================
+   Dark-mode fix for KaTeX / MathJax:
+   - Force math to inherit the surrounding text color
+   - Ensure SVG output uses currentColor (important for MathJax SVG)
+   ========================================================================== */
+
+/* --- KaTeX --------------------------------------------------------------- */
+.dark .katex {
+  color: inherit !important;
+}
+
+/* KaTeX sometimes has inner spans that can still look “stuck” — keep them inheriting */
+.dark .katex * {
+  color: inherit !important;
+}
+
+/* --- MathJax (v3/v4) ----------------------------------------------------- */
+/* CHTML output */
+.dark mjx-container {
+  color: inherit !important;
+}
+
+/* SVG output: make sure fills/strokes follow text color */
+.dark mjx-container svg,
+.dark mjx-container svg * {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Some setups still expose MathJax root classes */
+.dark .MathJax,
+.dark .MathJax svg,
+.dark .MathJax svg * {
+  color: inherit !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
