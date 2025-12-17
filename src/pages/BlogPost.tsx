@@ -121,16 +121,18 @@ export default function BlogPost() {
                 It helps to first make the <em>forward noising rule</em> completely concrete. Modern common diffusion models (such as DDPM, Score SDE, Flow Matching) that we will revisit in this post all start from this same basic construction.
               </p>
 
-              <div className="bg-white dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-700 mb-3">
+              <div className="mb-3">
                 <img
                   src="/assets/vdm-forward.svg"
                   alt="Forward diffusion process visualization"
-                  className="w-full rounded shadow-sm"
+                  className="block w-full h-auto"
                   onError={(e) => {
-                    e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
                   }}
                 />
               </div>
+
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Let <InlineMath math="\mathbf{x}_0 \in \mathbb{R}^D" /> be a clean data sample (an image, an audio clip, etc.) sampled from a given data distribution <InlineMath math="p_{\text{data}}" />. The forward process gradually corrupts <InlineMath math="\mathbf{x}_0" /> into a noisy version <InlineMath math="\mathbf{x}_t" />. A standard and very convenient choice is:
