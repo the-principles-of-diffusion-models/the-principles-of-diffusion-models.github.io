@@ -25,44 +25,22 @@ async function generateVisitorId(): Promise<string> {
 
 export async function trackVisitor(): Promise<void> {
   try {
-    if (!supabase) return; // Supabase not configured in this build → no-op
+    if (!supabase) return;
 
     const visitorId = await generateVisitorId();
+    const now = new Date().toISOString();
 
-    const { data: existing, error: selectError } = await supabase
+    // 1 row per visitor_id (unique). Repeat visits update last_visit but do NOT add rows.
+    const { error } = await supabase
       .from('visitors')
-      .select('id, visit_count')
-      .eq('visitor_id', visitorId)
-      .maybeSingle();
+      .upsert(
+        { visitor_id: visitorId, last_visit: now },
+        { onConflict: 'visitor_id' }
+      );
 
-    if (selectError) {
-      console.error('Error checking visitor:', selectError);
-      return;
-    }
-
-    if (existing) {
-      const { error: updateError } = await supabase
-        .from('visitors')
-        .update({
-          last_visit: new Date().toISOString(),
-          visit_count: (existing.visit_count ?? 0) + 1,
-        })
-        .eq('visitor_id', visitorId);
-
-      if (updateError) console.error('Error updating visitor:', updateError);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from('visitors').insert({
-      visitor_id: visitorId,
-      first_visit: new Date().toISOString(),
-      last_visit: new Date().toISOString(),
-      visit_count: 1,
-    });
-
-    if (insertError) console.error('Error inserting visitor:', insertError);
-  } catch (error) {
-    console.error('Error tracking visitor:', error);
+    if (error) console.error('Error upserting visitor:', error);
+  } catch (e) {
+    console.error('Error tracking visitor:', e);
   }
 }
 
@@ -70,19 +48,19 @@ export async function getVisitorCount(): Promise<number> {
   try {
     if (!supabase) return 0;
 
-    const { data, error } = await supabase
-      .from('site_stats')
-      .select('unique_visitors')
-      .maybeSingle();
+    // Count rows = unique visitors
+    const { count, error } = await supabase
+      .from('visitors')
+      .select('visitor_id', { count: 'exact', head: true });
 
     if (error) {
       console.error('Error fetching visitor count:', error);
       return 0;
     }
 
-    return data?.unique_visitors ?? 0;
-  } catch (error) {
-    console.error('Error fetching visitor count:', error);
+    return count ?? 0;
+  } catch (e) {
+    console.error('Error fetching visitor count:', e);
     return 0;
   }
 }
