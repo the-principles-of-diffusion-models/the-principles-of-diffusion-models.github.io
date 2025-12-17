@@ -581,18 +581,8 @@ export default function BlogPost() {
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Building on the key insight from Score SDE that diffusion sampling is essentially solving differential
-                equations, we can adapt classical numerical ODE solvers to the PF-ODE structure.
-                Read more in{" "}
-                <a
-                  href="https://arxiv.org/pdf/2510.21890#page=259"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
-                >
-                  Chapter 9
-                </a>
-                , where we cover a range of more sophisticated solvers. Moreover, from the ODE-based viewpoint, sampling
-                can be steered by taking linear combinations of vector fields (e.g., classifier-guidance/classifier-free guidance); see{" "}
+                equations, sampling can be steered by taking linear combinations of vector fields (e.g., classifier
+                guidance / classifier-free guidance); see{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=231"
                   target="_blank"
@@ -601,8 +591,20 @@ export default function BlogPost() {
                 >
                   Chapter 8
                 </a>
-                .
+                . However, solving these differential equations typically requires hundreds to thousands of steps to
+                approximate the integral, so a large body of work adapts classical numerical ODE solvers to the PF-ODE
+                structure for fast sampling. Read more in{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=259"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  Chapter 9
+                </a>
+                , where we cover a range of more sophisticated solvers.
               </p>
+
 
 
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
