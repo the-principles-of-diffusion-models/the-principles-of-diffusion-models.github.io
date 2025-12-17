@@ -464,7 +464,7 @@ export default function BlogPost() {
                 >
                   Chapter 4
                 </a>                
-                for how classic energy-based methods connect to score-based diffusion models and the continuous-time differential-equation framework.
+                {" "}for how classic energy-based methods connect to score-based diffusion models and the continuous-time differential-equation framework.
               </p>
 
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
