@@ -642,6 +642,18 @@ export default function BlogPost() {
                 If we move points by an invertible map, density changes according to how much the map locally stretches or compresses space.
               </blockquote>
 
+              <div className="mb-3">
+                <img
+                  src="/assets/change-of-variable.png"
+                  alt="Change-of-variable visualization"
+                  className="block w-full h-auto"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
+
               <h3 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mt-8 mb-4">
                 From One Big Map to a Time-Evolution
               </h3>
