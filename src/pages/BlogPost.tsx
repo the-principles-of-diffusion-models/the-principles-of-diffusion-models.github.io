@@ -1301,6 +1301,29 @@ export default function BlogPost() {
               </p>
             </section>
 
+            <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+              Read more about diffusion-based few-step generative models in{" "}
+              <a
+                href="https://arxiv.org/pdf/2510.21890#page=328"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+              >
+                Chapter 10
+              </a>
+              , and flow-map models in{" "}
+              <a
+                href="https://arxiv.org/pdf/2510.21890#page=346"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+              >
+                Chapter 11
+              </a>
+              .
+            </p>
+
+
             <section>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mt-12 mb-6 border-t pt-8 border-slate-200 dark:border-slate-700">
                 Conclusion
