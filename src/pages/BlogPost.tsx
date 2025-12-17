@@ -537,19 +537,26 @@ export default function BlogPost() {
                 To actually run this on a computer, we discretize time into a grid and step <em>backward</em> from <InlineMath math="t" /> to <InlineMath math="t-\Delta t" /> along a chosen schedule. Each step replaces the continuous ODE with a small update rule, giving a practical approximation to the trajectory. Below are two standard concrete examples.
               </p>
 
-              <h5 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4 mb-2">
-                Euler = DDIM-style Step
-              </h5>
+              <div className="mt-4 mb-4 border-l-4 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 pl-4 py-3 rounded-r">
+                <h5 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
+                  Euler = DDIM-style Step
+                </h5>
 
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-                The simplest choice is to use the velocity at the current point:
-              </p>
+                <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+                  The simplest choice is to use the velocity at the current point:
+                </p>
 
-              <BlockMath math="\mathbf{x}_{t-\Delta t} = \mathbf{x}_t -\Delta t\,\mathbf{v}_\theta(\mathbf{x}_t,t)." />
+                <div className="mt-3">
+                  <BlockMath math="\mathbf{x}_{t-\Delta t} = \mathbf{x}_t -\Delta t\,\mathbf{v}_\theta(\mathbf{x}_t,t)." />
+                </div>
 
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                This is the basic <em>first-order</em> Euler discretization of an ODE. With the learned diffusion-model velocity plugged in, this update recovers the familiar <em>DDIM-style deterministic sampler</em>: one model call per step, fast, but limited by first-order numerical accuracy.
-              </p>
+                <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
+                  This is the basic <em>first-order</em> Euler discretization of an ODE. With the learned diffusion-model
+                  velocity plugged in, this update recovers the familiar <em>DDIM-style deterministic sampler</em>: one model
+                  call per step, fast, but limited by first-order numerical accuracy.
+                </p>
+              </div>
+
 
               <h5 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4 mb-2">
                 Heun = 2nd-order DPM-Solver-style Step
@@ -580,8 +587,7 @@ export default function BlogPost() {
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Building on the key insight from Score SDE that diffusion sampling is essentially solving differential
-                equations, sampling can be steered by taking linear combinations of vector fields (e.g., classifier
+                Building on the key insight from Score SDE that diffusion sampling is essentially solving differential equations, sampling can be steered by taking linear combinations of vector fields (e.g., classifier
                 guidance / classifier-free guidance); see{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=231"
@@ -591,8 +597,7 @@ export default function BlogPost() {
                 >
                   Chapter 8
                 </a>
-                . However, solving these differential equations typically requires hundreds to thousands of steps to
-                approximate the integral, so a large body of work adapts classical numerical ODE solvers to the PF-ODE
+                . However, solving these differential equations typically requires hundreds to thousands of steps to approximate the integral, so a large body of work adapts classical numerical ODE solvers to the PF-ODE
                 structure for fast sampling. Read more in{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=259"
@@ -926,6 +931,20 @@ export default function BlogPost() {
                 The reverse-time generation step is then built to play the same movie reversely. We start from noise and update the sample step by step (by solving the PF-ODE), while remaining consistent with <em>the same</em> snapshot path <InlineMath math="p_t" /> along the way.
               </p>
             </section>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Read more about the change-of-variable story in{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=403"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  Appendix B
+                </a>
+                {" "}.
+              </p>
+
 
             <section>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mt-12 mb-6 border-t pt-8 border-slate-200 dark:border-slate-700">
