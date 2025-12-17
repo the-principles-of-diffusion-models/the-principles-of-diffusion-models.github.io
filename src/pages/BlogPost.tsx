@@ -100,6 +100,20 @@ export default function BlogPost() {
                 Classical models such as GANs and VAEs attempt to learn this arrow in one or a few large steps: a single neural network takes a noise vector and outputs an image.
               </p>
 
+              <p>
+                Read more in{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=20"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  chapter 1
+                </a>
+                .
+              </p>
+
+
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 <strong>Diffusion-style models</strong> follow a different philosophy. Instead of jumping directly from noise to data, they move in many <em>small increments</em>. More precisely, the construction consists of two coupled procedures:
               </p>
