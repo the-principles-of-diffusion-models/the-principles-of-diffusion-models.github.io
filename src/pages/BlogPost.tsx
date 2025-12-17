@@ -238,20 +238,6 @@ export default function BlogPost() {
                 </li>
               </ul>
 
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                In{" "}
-                <a
-                  href="https://arxiv.org/pdf/2510.21890#page=172"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
-                >
-                  Chapter 6
-                </a>{" "}
-                of our book, we provide a systematic treatment of the relationships between diffusion models arising from different perspectives.
-              </p>
-
-
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 DDPM: Predicting the Reverse Step via Noise or Mean
               </h4>
@@ -592,6 +578,19 @@ export default function BlogPost() {
                 In both cases, repeating the update from <InlineMath math="t=T" /> down to <InlineMath math="t=0" /> yields a data-like sample <InlineMath math="\mathbf{x}_0" />.
               </p>
 
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                In{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=259"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  Chapter 9
+                </a>
+                ,{" "}for how classic normalizing flows connect to the flow-based (flow matching) perspective on diffusion models.
+              </p>
+
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Three Lenses on the Same Diffusion Path
               </h4>
@@ -634,6 +633,19 @@ export default function BlogPost() {
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 So, while different papers choose different training targets, they are largely <em>inter-convertible descriptions</em> of the same density evolution.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                In{" "}
+                <a
+                  href="https://arxiv.org/pdf/2510.21890#page=172"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  Chapter 6
+                </a>{" "}
+                of our book, we provide a systematic treatment of the relationships between diffusion models arising from different perspectives.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
