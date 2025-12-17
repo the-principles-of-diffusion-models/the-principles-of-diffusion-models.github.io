@@ -558,29 +558,38 @@ export default function BlogPost() {
               </div>
 
 
-              <h5 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4 mb-2">
-                Heun = 2nd-order DPM-Solver-style Step
-              </h5>
+              <div className="mt-4 mb-4 border-l-4 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 pl-4 py-3 rounded-r">
+                <h5 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
+                  Heun = 2nd-order DPM-Solver-style Step
+                </h5>
 
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-                A small upgrade is to take one "draft" step, then correct it using the velocity at the endpoint.
-              </p>
+                <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+                  A small upgrade is to take one "draft" step, then correct it using the velocity at the endpoint.
+                </p>
 
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Predict (Euler):
-              </p>
+                <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
+                  Predict (Euler):
+                </p>
 
-              <BlockMath math="\tilde{\mathbf{x}}_{t-\Delta t} = \mathbf{x}_t-\Delta t\,\mathbf{v}_\theta(\mathbf{x}_t,t)." />
+                <div className="mt-2">
+                  <BlockMath math="\tilde{\mathbf{x}}_{t-\Delta t} = \mathbf{x}_t-\Delta t\,\mathbf{v}_\theta(\mathbf{x}_t,t)." />
+                </div>
 
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Correct (average the two velocities):
-              </p>
+                <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
+                  Correct (average the two velocities):
+                </p>
 
-              <BlockMath math="\mathbf{x}_{t-\Delta t} = \mathbf{x}_t -\frac{\Delta t}{2}\Big( \mathbf{v}_\theta(\mathbf{x}_t,t) + \mathbf{v}_\theta(\tilde{\mathbf{x}}_{t-\Delta t},\,t-\Delta t) \Big)." />
+                <div className="mt-2">
+                  <BlockMath math="\mathbf{x}_{t-\Delta t} = \mathbf{x}_t -\frac{\Delta t}{2}\Big( \mathbf{v}_\theta(\mathbf{x}_t,t) + \mathbf{v}_\theta(\tilde{\mathbf{x}}_{t-\Delta t},\,t-\Delta t) \Big)." />
+                </div>
 
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                This is a <em>second-order</em> method. With the diffusion-model velocity plugged in, it becomes the same predictor–corrector pattern used by <em>second-order DPM-Solver</em> variants: two model calls per step, but typically much better accuracy at the same step budget.
-              </p>
+                <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
+                  This is a <em>second-order</em> method. With the diffusion-model velocity plugged in, it becomes the same
+                  predictor–corrector pattern used by <em>second-order DPM-Solver</em> variants: two model calls per step, but
+                  typically much better accuracy at the same step budget.
+                </p>
+              </div>
+
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 In both cases, repeating the update from <InlineMath math="t=T" /> down to <InlineMath math="t=0" /> yields a data-like sample <InlineMath math="\mathbf{x}_0" />.
