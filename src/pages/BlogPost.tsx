@@ -108,9 +108,36 @@ export default function BlogPost() {
                 <li className="leading-relaxed text-slate-700 dark:text-slate-300">
                   In the <strong>forward process</strong>, we start from real data and gradually add small amounts of simple random noise at many tiny steps. As this corruption progresses, fine details disappear first, then larger structures become indistinct, and eventually every sample looks like featureless noise. By the end, all examples, regardless of which original image or sound they came from, are brought into a <em>common noisy space</em> that is very close to a standard Gaussian distribution and easy to sample from. Although we typically do not run this forward process at test time, it is essential during training because it provides a precise, controlled way to relate clean data to their noisy versions.
                 </li>
+
+                <div className="mb-3">
+                  <img
+                    src="/assets/vdm-forward.svg"
+                    alt="Forward diffusion process visualization"
+                    className="block w-full h-auto"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                    }}
+                  />
+                </div>
+
+
                 <li className="leading-relaxed text-slate-700 dark:text-slate-300">
                   In the <strong>reverse process</strong>, the model learns to undo this artificial corruption step by step. Starting from pure noise, it applies a sequence of learned denoising updates that gradually reintroduce structure: coarse shapes first, then finer details. After enough steps, the final outputs resemble realistic data again. This reverse procedure is what we actually use at sampling time to turn noise into data.
                 </li>
+
+                <div className="mb-3">
+                  <img
+                    src="/assets/vdm-backward.svg"
+                    alt="Reverse diffusion process visualization"
+                    className="block w-full h-auto"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                    }}
+                  />
+                </div>
+
               </ul>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -132,19 +159,6 @@ export default function BlogPost() {
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
                 It helps to first make the <em>forward noising rule</em> completely concrete. Modern common diffusion models (such as DDPM, Score SDE, Flow Matching) that we will revisit in this post all start from this same basic construction.
               </p>
-
-              <div className="mb-3">
-                <img
-                  src="/assets/vdm-forward.svg"
-                  alt="Forward diffusion process visualization"
-                  className="block w-full h-auto"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
-                  }}
-                />
-              </div>
-
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Let <InlineMath math="\mathbf{x}_0 \in \mathbb{R}^D" /> be a clean data sample (an image, an audio clip, etc.) sampled from a given data distribution <InlineMath math="p_{\text{data}}" />. The forward process gradually corrupts <InlineMath math="\mathbf{x}_0" /> into a noisy version <InlineMath math="\mathbf{x}_t" />. A standard and very convenient choice is:
