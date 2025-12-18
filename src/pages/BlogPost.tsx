@@ -850,7 +850,7 @@ export default function BlogPost() {
                 Now the limit <InlineMath math="\Delta t\to 0" /> is just the definition of a time derivative, yielding the <em>continuity equation</em>
               </p>
 
-              <div className="bg-orange-50 border-2 border-orange-100 rounded-lg p-6 my-6">
+              <div className="bg-orange-50 dark:bg-slate-800 border-2 border-orange-100 dark:border-slate-600 rounded-lg p-6 my-6 overflow-x-auto">
                 <BlockMath math="\frac{\partial p_t(\mathbf{x})}{\partial t} = -\nabla_{\mathbf{x}}\cdot\bigl(p_t(\mathbf{x})\,\mathbf{v}_t(\mathbf{x})\bigr)." />
               </div>
 
@@ -1014,7 +1014,7 @@ export default function BlogPost() {
                 If we could query the true <em>time-jump</em> <InlineMath math="\Psi_{s\to t}" />, the training story would be almost too simple: we would just regress to the oracle target. Concretely, we would sample a start time <InlineMath math="s" />, an end time <InlineMath math="t" />, draw a point <InlineMath math="\mathbf{x}_s\sim p_s" />, and train a model <InlineMath math="\mathbf{G}_\theta" /> to predict where that point should land after evolving from <InlineMath math="s" /> to <InlineMath math="t" />:
               </p>
 
-              <div className="bg-orange-50 border-2 border-orange-100 rounded-lg p-6 my-6">
+              <div className="bg-orange-50 dark:bg-slate-800 border-2 border-orange-100 dark:border-slate-600 rounded-lg p-6 my-6 overflow-x-auto">
                 <BlockMath math="\mathcal{L}_{\text{oracle}}(\theta) = \mathbb{E}_{s,t}\,\mathbb{E}_{\mathbf{x}_s\sim p_s} \Bigl[ w(s,t)d\bigl(\mathbf{G}_\theta(\mathbf{x}_s,s,t),\,\Psi_{s\to t}(\mathbf{x}_s)\bigr) \Bigr]." />
               </div>
 
@@ -1363,4 +1363,5 @@ export default function BlogPost() {
     </div>
   );
 }
+
 
