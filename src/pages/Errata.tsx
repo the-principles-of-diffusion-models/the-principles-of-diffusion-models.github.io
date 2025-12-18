@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, FileText } from "lucide-react";
+import DarkModeToggle from "../components/DarkModeToggle";
 
 const ERRATA_URL = "/assets/errata.pdf";
 
@@ -45,11 +46,13 @@ export default function Errata() {
         if (!lm) throw new Error("Missing Last-Modified header for errata.pdf");
 
         const date = new Date(lm);
-        if (Number.isNaN(date.getTime())) throw new Error("Invalid Last-Modified date");
+        if (Number.isNaN(date.getTime()))
+          throw new Error("Invalid Last-Modified date");
 
         if (!cancelled) setLastModified(date);
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "Failed to detect last update time");
+        if (!cancelled)
+          setError(e?.message ?? "Failed to detect last update time");
       }
     }
 
@@ -68,20 +71,23 @@ export default function Errata() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <DarkModeToggle />
+
       <div className="mx-auto max-w-5xl px-4 py-10">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+          className="inline-flex items-center gap-2 text-orange-400 hover:text-orange-500 dark:text-orange-300 dark:hover:text-orange-400 mb-8 transition-colors font-medium"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
         </Link>
 
         <h1 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
           Errata
         </h1>
         <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-700 dark:text-slate-300">
-          The PDF below lists corrections and updates to the book and points out the errata.
+          The PDF below lists corrections and updates to the book and points out
+          the errata.
         </p>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -132,7 +138,9 @@ export default function Errata() {
               ) : error ? (
                 <>
                   Last updated:{" "}
-                  <span className="text-rose-600 dark:text-rose-400">{error}</span>
+                  <span className="text-rose-600 dark:text-rose-400">
+                    {error}
+                  </span>
                 </>
               ) : (
                 <>Last updated: loading…</>
