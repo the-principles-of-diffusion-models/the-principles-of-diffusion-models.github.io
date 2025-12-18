@@ -2,26 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================================
-   KaTeX Dark Mode Fix - Complete Solution
-   ============================================================================ */
+/* =============================================================================
+   KaTeX Dark Mode Fix - Global Solution
+   ============================================================================= */
 
 /* Force all KaTeX elements to inherit text color in dark mode */
 html.dark .katex,
-html.dark .katex-html,
-html.dark .katex-display {
-  color: inherit !important;
-}
-
-/* Apply to all child elements within KaTeX */
 html.dark .katex *,
+html.dark .katex-display,
 html.dark .katex-display * {
   color: inherit !important;
 }
 
-/* Fix borders for boxed formulas like \boxed{} */
+/* Ensure SVG elements also inherit color */
+html.dark .katex svg,
+html.dark .katex svg * {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Fix borders for boxed formulas */
 html.dark .katex .fbox,
-html.dark .katex .boxed {
+html.dark .katex .fcolorbox {
   border-color: currentColor !important;
 }
 
@@ -35,7 +37,8 @@ html.dark .katex .sqrt > .root {
   border-top-color: currentColor !important;
 }
 
-/* Fix rule lines (horizontal lines) */
-html.dark .katex .rule {
-  background-color: currentColor !important;
+/* Fix delimiters */
+html.dark .katex .delimsizing,
+html.dark .katex .sizing {
+  color: inherit !important;
 }
