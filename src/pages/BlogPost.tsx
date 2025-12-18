@@ -290,7 +290,7 @@ export default function BlogPost() {
                 A neat calculation shows that the original "impossible" objective can be rewritten as
               </p>
 
-              <div className="bg-orange-50 border-2 border-orange-100 rounded-lg p-6 my-6 overflow-x-auto">
+              <div className="bg-orange-50 dark:bg-slate-800 border-2 border-orange-100 dark:border-slate-600 rounded-lg p-6 my-6 overflow-x-auto">
                 <BlockMath math="\mathbb{E}_{p_t(\mathbf{x}_t)}\!\big[ \mathcal{D}_{\mathrm{KL}}(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)) \big] = \mathbb{E}_{p_{\text{data}}(\mathbf{x}_0)}\mathbb{E}_{p(\mathbf{x}_t\mid \mathbf{x}_0)} \big[ \mathcal{D}_{\mathrm{KL}}(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t,\mathbf{x}_0)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)) \big] + C," />
               </div>
 
@@ -397,7 +397,7 @@ export default function BlogPost() {
                 More precisely, <em>denoising score matching</em> gives the same kind of "conditional trick" we saw in DDPM: the intractable regression target <InlineMath math="\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t)" /> can be replaced by the <em>tractable</em> conditional target <InlineMath math="\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t\mid \mathbf{x}_0)" />, and the two objectives differ only by a constant (so they induce the same gradient updates and the same optimum). Formally, for a constant <InlineMath math="C" /> that does <em>not</em> depend on <InlineMath math="\theta" />,
               </p>
 
-              <div className="bg-orange-50 border-2 border-orange-100 rounded-lg p-6 my-6 overflow-x-auto">
+              <div className="bg-orange-50 dark:bg-slate-800 border-2 border-orange-100 dark:border-slate-600 rounded-lg p-6 my-6 overflow-x-auto">
                 <BlockMath math="\mathbb{E}_{t}\,\mathbb{E}_{\mathbf{x}_t\sim p_t} \Big[ \lambda(t)\, \big\| \mathbf{s}_\theta(\mathbf{x}_t,t) - \nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t) \big\|_2^2 \Big] = \mathbb{E}_{t}\,\mathbb{E}_{\mathbf{x}_0\sim p_{\text{data}}}\,\mathbb{E}_{\mathbf{x}_t\sim p(\cdot\mid \mathbf{x}_0)} \Big[ \lambda(t)\, \big\| \mathbf{s}_\theta(\mathbf{x}_t,t) -\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t\mid \mathbf{x}_0) \big\|_2^2 \Big] + C." />
               </div>
 
@@ -501,7 +501,7 @@ export default function BlogPost() {
                 Now the key equivalence mirrors denoising score matching. A standard squared-loss decomposition implies that, for a constant <InlineMath math="C" /> independent of <InlineMath math="\theta" />,
               </p>
 
-              <div className="bg-orange-50 border-2 border-orange-100 rounded-lg p-6 my-6 overflow-x-auto">
+              <div className="bg-orange-50 dark:bg-slate-800 border-2 border-orange-100 dark:border-slate-600 rounded-lg p-6 my-6 overflow-x-auto">
                 <BlockMath math="\mathbb{E}_{t}\,\mathbb{E}_{\mathbf{x}_t\sim p_t} \Big[ \lambda(t)\, \big\| \mathbf{v}_\theta(\mathbf{x}_t,t)-\mathbf{v}(\mathbf{x}, t) \big\|_2^2 \Big] = \mathbb{E}_{t,\,\mathbf{x}_0,\,\boldsymbol{\epsilon}} \Big[ \lambda(t)\, \big\| \mathbf{v}_\theta(\mathbf{x}_t,t)-\mathbf{v}^{\text{cond}}(\mathbf{x}_t,t) \big\|_2^2 \Big] + C." />
               </div>
 
@@ -920,7 +920,7 @@ export default function BlogPost() {
                 Add these two contributions, and apply the same net-outflow rule as in the continuity equation:
               </p>
 
-              <div className="bg-orange-50 border-2 border-orange-100 rounded-lg p-6 my-6 overflow-x-auto">
+              <div className="bg-orange-50 dark:bg-slate-800 border-2 border-orange-100 dark:border-slate-600 rounded-lg p-6 my-6 overflow-x-auto">
                 <BlockMath math="\frac{\partial p_t(\mathbf{x})}{\partial t} = -\nabla_{\mathbf{x}}\cdot\Big(\mathbf{J}_{\text{move}}(\mathbf{x},t)+\mathbf{J}_{\text{spread}}(\mathbf{x},t)\Big) = -\nabla_{\mathbf{x}}\cdot\bigl(\mathbf{f}_t(\mathbf{x})\,p_t(\mathbf{x})\bigr) +\frac{1}{2}g(t)^2\,\Delta_{\mathbf{x}}p_t(\mathbf{x})." />
               </div>
 
@@ -1363,3 +1363,4 @@ export default function BlogPost() {
     </div>
   );
 }
+
