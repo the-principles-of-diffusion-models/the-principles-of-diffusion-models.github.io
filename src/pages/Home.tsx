@@ -37,11 +37,14 @@ const PART_TITLES = [
   'Appendices',
 ];
 
+// ✅ arXiv PDF base (used for TOC deep links)
+const ARXIV_PDF_URL = 'https://arxiv.org/pdf/2510.21890';
+
 function stripDotLeaders(s: string) {
   // ✅ Remove sequences like ". . ." or ". . . . . . ."
   // ✅ Keep numbering like "11.3" / "A.1" (no spaces around the dot, so it won't match).
   return s
-    .replace(/\s*(?:\.\s*){2,}/g, ' ') // <-- FIX: 2+ not 4+
+    .replace(/\s*(?:\.\s*){2,}/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -94,12 +97,33 @@ function TocBlock({ text }: { text: string }) {
 
           const indentClass = it.kind === 'section' ? 'pl-5' : 'pl-0';
 
+          // ✅ Deep-link to PDF page
+          const href = it.page ? `${ARXIV_PDF_URL}#page=${it.page}` : undefined;
+
+          const TitleNode = href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={
+                // keep same layout/ellipsis, but make it feel like a link
+                `min-w-0 truncate ${titleClass} ` +
+                'hover:underline underline-offset-2 ' +
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60 rounded-sm'
+              }
+              title={`${it.title} (page ${it.page})`}
+            >
+              {it.title}
+            </a>
+          ) : (
+            <span className={`min-w-0 truncate ${titleClass}`} title={it.title}>
+              {it.title}
+            </span>
+          );
+
           return (
             <div key={it.key} className={`flex items-baseline ${indentClass}`}>
-              {/* keep one line so leader/page align; full title on hover */}
-              <span className={`min-w-0 truncate ${titleClass}`} title={it.title}>
-                {it.title}
-              </span>
+              {TitleNode}
 
               {/* dotted leader auto-fills remaining width */}
               {it.page ? (
@@ -356,7 +380,6 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
 
   const aboutSlides: Array<{
     heading: string;
-    sub?: string;
     body: JSX.Element;
   }> = [
     {
@@ -546,20 +569,13 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                         'bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm ' +
                         (isOverview ? '' : 'flex flex-col')
                       }
-                      style={
-                        !isOverview && overviewHeight
-                          ? { height: overviewHeight }
-                          : undefined
-                      }
+                      style={!isOverview && overviewHeight ? { height: overviewHeight } : undefined}
                     >
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <div>
                           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                             {s.heading}
                           </h3>
-                          {s.sub ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{s.sub}</p>
-                          ) : null}
                         </div>
 
                         <span
@@ -607,6 +623,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
           </div>
         </div>
 
+        {/* --- rest of your page stays unchanged --- */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 mb-8">
           <div className="flex items-center gap-3 mb-6">
             <Newspaper className="w-6 h-6 text-orange-400" />
