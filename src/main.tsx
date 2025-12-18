@@ -1,13 +1,15 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
-import './index.css';
 
-// KaTeX base styles (needed by react-katex)
+/** 1) KaTeX base CSS */
 import 'katex/dist/katex.min.css';
 
-// Your dark-mode fix (forces KaTeX/MathJax to inherit text color in dark mode)
-import './styles/math-dark.css';
+/** 2) Your KaTeX overrides MUST come after KaTeX */
+import './katex-theme.css';
+
+/** 3) Tailwind / site styles */
+import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
