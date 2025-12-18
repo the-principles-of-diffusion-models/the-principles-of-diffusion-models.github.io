@@ -56,7 +56,7 @@ export default function TeachingGuide() {
                 Guided Generation (Chapter 8)
               </h2>
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-                For most courses, it is sufficient to focus on the CG/CFG section in Chapter 8. The goal is not to survey every conditioning method, but to teach the key mechanism: ODE-based sampling can be steered by taking linear combinations of vector fields. This viewpoint can be motivated cleanly from conditional modeling or Bayes' rule. Once students understand this mechanism, they can reason about many guidance variants without memorizing formulas.
+                For most courses, it is sufficient to focus on the CG/CFG section in Chapter 8. The goal is not to survey every conditioning method, but to teach the key mechanism: ODE-based sampling can be steered by taking linear combinations of vector fields, leading to samples from tilted distributions. This viewpoint can be motivated cleanly through conditional modeling or Bayes’ rule. Once students understand this mechanism, they can reason about many guidance variants without memorizing formulas.
               </p>
             </section>
 
@@ -129,6 +129,7 @@ export default function TeachingGuide() {
     </div>
   );
 }
+
 
 
 
