@@ -79,10 +79,9 @@ export default function Errata() {
           Back to Home
         </Link>
 
-        {/* ✅ BIGGER round icon LEFT of title */}
         <div className="mt-6 flex items-center gap-5">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
-            <FileWarning className="h-10 w-10" />
+          <div className="bg-orange-100 p-6 rounded-full dark:bg-orange-500/15">
+            <FileWarning className="w-16 h-16 text-orange-500 dark:text-orange-400" />
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
