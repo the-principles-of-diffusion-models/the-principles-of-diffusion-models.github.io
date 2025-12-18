@@ -372,18 +372,15 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
       ),
     },
     {
-      heading: 'Table of Contents',
-      sub: 'Parts A–B',
+      heading: 'Table of Contents: Parts A–B',
       body: <TocBlock text={tocAB} />,
     },
     {
-      heading: 'Table of Contents',
-      sub: 'Parts C–D',
+      heading: 'Table of Contents: Parts C–D',
       body: <TocBlock text={tocCD} />,
     },
     {
-      heading: 'Appendix',
-      sub: 'Crash courses + proofs',
+      heading: 'Appendix: Crash Courses & Proofs',
       body: <TocBlock text={tocApp} />,
     },
   ];
