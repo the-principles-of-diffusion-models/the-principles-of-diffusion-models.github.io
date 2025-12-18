@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileWarning } from "lucide-react";
 import DarkModeToggle from "../components/DarkModeToggle";
 
 const ERRATA_URL = "/assets/errata.pdf";
@@ -98,7 +98,7 @@ export default function Errata() {
           >
             {/* PDF logo (icon) */}
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
-              <FileText className="h-6 w-6" />
+              <FileWarning className="h-6 w-6" />
             </div>
 
             <div className="min-w-0 flex-1">
