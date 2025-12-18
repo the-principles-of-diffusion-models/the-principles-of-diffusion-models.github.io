@@ -81,26 +81,26 @@ function TocBlock({ text }: { text: string }) {
   const items = parseToc(text);
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4 max-h-[420px] overflow-y-auto">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
       <div className="space-y-1 font-mono">
         {items.map((it) => {
           const titleClass =
             it.kind === 'part'
-              ? 'text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100'
+              ? 'text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100'
               : it.kind === 'chapter'
-                ? 'text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100'
-                : 'text-xs text-slate-800 dark:text-slate-100';
+                ? 'text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100'
+                : 'text-xs sm:text-sm text-slate-800 dark:text-slate-100';
 
           const indentClass = it.kind === 'section' ? 'pl-5' : 'pl-0';
 
           return (
             <div key={it.key} className={`flex items-baseline ${indentClass}`}>
-              {/* keep one line so leader + page align; full title on hover */}
+              {/* keep one line so leader/page align perfectly; full title on hover */}
               <span className={`min-w-0 truncate ${titleClass}`} title={it.title}>
                 {it.title}
               </span>
 
-              {/* dotted leader auto-fills width */}
+              {/* dotted leader auto-fills remaining width */}
               {it.page ? (
                 <>
                   <span
@@ -372,15 +372,18 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
       ),
     },
     {
-      heading: 'Table of Contents: Parts A–B',
+      heading: 'Table of Contents',
+      sub: 'Parts A–B',
       body: <TocBlock text={tocAB} />,
     },
     {
-      heading: 'Table of Contents: Parts C–D',
+      heading: 'Table of Contents',
+      sub: 'Parts C–D',
       body: <TocBlock text={tocCD} />,
     },
     {
-      heading: 'Appendix: Crash Courses & Proofs',
+      heading: 'Appendix',
+      sub: 'Crash Courses & Proofs',
       body: <TocBlock text={tocApp} />,
     },
   ];
@@ -408,6 +411,10 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     if (dx > 50) prevAbout();
     if (dx < -50) nextAbout();
   };
+
+  // ✅ fixed slide-card height so TOC cards are as “long” as Overview.
+  // Feel free to tweak these numbers if you want more/less height.
+  const SLIDE_CARD_H = 'h-[560px] md:h-[620px]';
 
   return (
     <div className="min-h-screen transition-colors duration-200 bg-[#F8F2FF] dark:bg-slate-900">
@@ -523,7 +530,10 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             >
               {aboutSlides.map((s, idx) => (
                 <div key={idx} className="w-full flex-none">
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm">
+                  {/* ✅ fixed-height card + internal scroll */}
+                  <div
+                    className={`rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm flex flex-col ${SLIDE_CARD_H}`}
+                  >
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div>
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -546,7 +556,10 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                       </span>
                     </div>
 
-                    {s.body}
+                    {/* ✅ this is the scroll container for ANY slide (Overview/TOC/Appendix) */}
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                      {s.body}
+                    </div>
                   </div>
                 </div>
               ))}
