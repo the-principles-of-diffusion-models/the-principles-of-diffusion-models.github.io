@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 import ScrollToTop from '../components/ScrollToTop';
 import DarkModeToggle from '../components/DarkModeToggle';
