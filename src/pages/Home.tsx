@@ -286,8 +286,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
       ),
     },
     {
-      heading: 'Appendix',
-      sub: 'Crash courses + proofs',
+      heading: 'Appendix: Crash Courses + Proofs',
       body: (
         <pre className="whitespace-pre-wrap bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4 text-xs font-mono text-slate-800 dark:text-slate-100 leading-relaxed max-h-[420px] overflow-y-auto">
           {tocApp}
