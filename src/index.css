@@ -2,4 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* --- KaTeX dark-mode fix: force math to follow surrounding text color --- */
+html.dark .katex,
+html.dark .katex-display {
+  color: inherit !important;
+}
+
+html.dark .katex * {
+  color: inherit !important;
+}
+
+/* Fix borders for things like \boxed */
+html.dark .katex .fbox {
+  border-color: currentColor !important;
+}
+
 
