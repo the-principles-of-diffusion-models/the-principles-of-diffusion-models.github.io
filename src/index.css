@@ -17,3 +17,22 @@ html.dark .katex .frac-line {
 html.dark .katex .sqrt > .root {
   border-top-color: currentColor !important;
 }
+
+/* Emergency override for KaTeX */
+.dark .katex-display {
+  color: #f3f4f6 !important;
+}
+
+.dark .katex-display .katex {
+  color: #f3f4f6 !important;
+}
+
+.dark .katex-display .katex .mord,
+.dark .katex-display .katex .mbin,
+.dark .katex-display .katex .mrel,
+.dark .katex-display .katex .mop,
+.dark .katex-display .katex .mopen,
+.dark .katex-display .katex .mclose,
+.dark .katex-display .katex .mpunct {
+  color: #f3f4f6 !important;
+}
