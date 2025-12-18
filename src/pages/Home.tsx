@@ -27,9 +27,9 @@ export default function Home() {
   const [visitorCount, setVisitorCount] = useState<number>(0);
   const accessBookRef = useRef<HTMLDivElement>(null);
 
-  // ✅ About-carousel state
-  const aboutCarouselRef = useRef<HTMLDivElement>(null);
+  // ✅ About-carousel (single-card slider)
   const [aboutActive, setAboutActive] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     getVisitorCount().then(setVisitorCount);
@@ -41,34 +41,6 @@ export default function Home() {
         sessionStorage.removeItem('scrollToTab');
       }, 100);
     }
-  }, []);
-
-  // ✅ keep aboutActive synced to scroll position (works with variable card widths)
-  useEffect(() => {
-    const el = aboutCarouselRef.current;
-    if (!el) return;
-
-    const onScroll = () => {
-      const slides = el.querySelectorAll<HTMLElement>('[data-about-slide]');
-      if (!slides.length) return;
-
-      let closest = 0;
-      let best = Number.POSITIVE_INFINITY;
-
-      slides.forEach((s, idx) => {
-        const dist = Math.abs(s.offsetLeft - el.scrollLeft);
-        if (dist < best) {
-          best = dist;
-          closest = idx;
-        }
-      });
-
-      setAboutActive(closest);
-    };
-
-    el.addEventListener('scroll', onScroll, { passive: true });
-    onScroll(); // initial
-    return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
   const bibtex = `@article{lai2025principles,
@@ -162,7 +134,7 @@ export default function Home() {
     }
   };
 
-  // ✅ TOC blocks (exact text you provided)
+  // ✅ TOC blocks
   const tocAB = `A Introduction to Deep Generative Modeling 14
 1 Deep Generative Modeling 15
 1.1 What is Deep Generative Modeling? . . . . . . . . . . . . . . . 16
@@ -219,7 +191,7 @@ for Model Alignment . . . . . . . . . . . . . . . . . . . . . . . . 243
 8.6 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 253
 9 Sophisticated Solvers for Fast Sampling 254
 9.1 Prologue . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 255
-9.2 DDIM . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 263
+9.2 DDIM . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 263
 9.3 DEIS . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 275
 9.4 DPM-Solver . . . . . . . . . . . . . . . . . . . . . . . . . . . . 282
 9.5 DPM-Solver++ . . . . . . . . . . . . . . . . . . . . . . . . . . . 295
@@ -327,17 +299,29 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     },
   ] as const;
 
-  const scrollAboutTo = (i: number) => {
-    const el = aboutCarouselRef.current;
-    if (!el) return;
-    const slides = el.querySelectorAll<HTMLElement>('[data-about-slide]');
-    const target = slides[i];
-    target?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+  const goAbout = (i: number) => {
+    const clamped = Math.max(0, Math.min(aboutSlides.length - 1, i));
+    setAboutActive(clamped);
   };
 
-  const scrollAboutBy = (dir: -1 | 1) => {
-    const next = Math.max(0, Math.min(aboutSlides.length - 1, aboutActive + dir));
-    scrollAboutTo(next);
+  const prevAbout = () => goAbout(aboutActive - 1);
+  const nextAbout = () => goAbout(aboutActive + 1);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartX.current;
+    touchStartX.current = null;
+    if (start == null) return;
+
+    const end = e.changedTouches[0]?.clientX ?? start;
+    const dx = end - start;
+
+    // swipe threshold
+    if (dx > 50) prevAbout();
+    if (dx < -50) nextAbout();
   };
 
   return (
@@ -402,7 +386,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
           </div>
         </div>
 
-        {/* ✅ About This Book: now a sliding multi-card row */}
+        {/* ✅ About This Book: ONE card at a time */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Feather className="w-6 h-6 text-orange-400" />
@@ -411,23 +395,37 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             </h2>
           </div>
 
-          {/* controls */}
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Drag / scroll horizontally to browse. (Dots jump to a section.)
+              Swipe / click arrows to browse. (One card per view.)
             </p>
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => scrollAboutBy(-1)}
-                className="inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                onClick={prevAbout}
+                disabled={aboutActive === 0}
+                className={
+                  'inline-flex items-center justify-center rounded-lg border px-2.5 py-2 transition-colors ' +
+                  'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 ' +
+                  (aboutActive === 0
+                    ? 'opacity-40 cursor-not-allowed'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-800')
+                }
                 aria-label="Previous"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
+
               <button
-                onClick={() => scrollAboutBy(1)}
-                className="inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                onClick={nextAbout}
+                disabled={aboutActive === aboutSlides.length - 1}
+                className={
+                  'inline-flex items-center justify-center rounded-lg border px-2.5 py-2 transition-colors ' +
+                  'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 ' +
+                  (aboutActive === aboutSlides.length - 1
+                    ? 'opacity-40 cursor-not-allowed'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-800')
+                }
                 aria-label="Next"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -435,58 +433,55 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             </div>
           </div>
 
-          {/* carousel */}
+          {/* slider viewport */}
           <div
-            ref={aboutCarouselRef}
-            className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-3
-                       [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="overflow-hidden"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
           >
-            {aboutSlides.map((s, idx) => (
-              <div
-                key={idx}
-                data-about-slide
-                className="
-                  snap-start flex-none
-                  w-[92%]
-                  sm:w-[70%]
-                  md:w-[55%]
-                  lg:w-[45%]
-                  xl:w-[32%]
-                "
-              >
-                <div className="h-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm">
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                        {s.heading}
-                      </h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{s.sub}</p>
+            {/* track */}
+            <div
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${aboutActive * 100}%)` }}
+            >
+              {aboutSlides.map((s, idx) => (
+                <div key={idx} className="w-full flex-none">
+                  <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                          {s.heading}
+                        </h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {s.sub}
+                        </p>
+                      </div>
+
+                      <span
+                        className={
+                          'mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ' +
+                          (idx === 0
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300'
+                            : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200')
+                        }
+                      >
+                        {idx + 1} / {aboutSlides.length}
+                      </span>
                     </div>
 
-                    <span
-                      className={
-                        'mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ' +
-                        (idx === 0
-                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300'
-                          : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200')
-                      }
-                    >
-                      {idx + 1} / {aboutSlides.length}
-                    </span>
+                    {s.body}
                   </div>
-
-                  {s.body}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* dots */}
-          <div className="mt-3 flex items-center justify-center gap-2">
+          <div className="mt-4 flex items-center justify-center gap-2">
             {aboutSlides.map((_, i) => (
               <button
                 key={i}
-                onClick={() => scrollAboutTo(i)}
+                onClick={() => goAbout(i)}
                 className={
                   'h-2.5 w-2.5 rounded-full transition-colors ' +
                   (i === aboutActive
