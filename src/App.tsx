@@ -5,7 +5,7 @@ import BlogPost from './pages/BlogPost';
 import ReadOnline from './pages/ReadOnline';
 import Publisher from './pages/Publisher';
 import TeachingGuide from './pages/TeachingGuide';
-import Errata from "./pages/Errata";
+import Errata from './pages/Errata';
 import { trackVisitor } from './lib/visitorTracking';
 
 function App() {
@@ -28,4 +28,5 @@ function App() {
 }
 
 export default App;
+
 
