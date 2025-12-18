@@ -82,11 +82,22 @@ export default function Errata() {
           Back to Home
         </Link>
 
-        <h1 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          Errata
-        </h1>
+        {/* ✅ round icon LEFT of title */}
+        <div className="mt-6 flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+            <FileWarning className="h-7 w-7" />
+          </div>
+
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Errata
+          </h1>
+        </div>
+
         <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-700 dark:text-slate-300">
-          The PDF below lists corrections and updates to the book and points out the errata. We are grateful for feedback from the community; if you notice any errors, typos, or unclear passages, please feel free to reach out.
+          The PDF below lists corrections and updates to the book and points out
+          the errata. We are grateful for feedback from the community; if you
+          notice any errors, typos, or unclear passages, please feel free to
+          reach out.
         </p>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
