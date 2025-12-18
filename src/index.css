@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+/* -----------------------------------------------------------------------
+   KaTeX dark-mode fix:
+   KaTeX’s default stylesheet can force black text/borders, which disappears
+   on dark backgrounds. :contentReference[oaicite:1]{index=1}
+------------------------------------------------------------------------ */
+
+@layer base {
+  /* Make KaTeX inherit the surrounding text color (works for both themes). */
+  .katex,
+  .katex-display {
+    color: currentColor;
+  }
+
+  /* Fix black borders (notably \boxed / fbox-like output). */
+  .katex .fbox {
+    border-color: currentColor;
+  }
+}
+
+/* If you STILL see black math, uncomment this stronger fallback:
+   (Use it only if necessary.)
+*/
+/*
+html.dark .katex,
+html.dark .katex-display {
+  color: rgb(226 232 240) !important;
+}
+html.dark .katex .fbox {
+  border-color: rgb(226 232 240) !important;
+}
+*/
+
