@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import type { TouchEvent } from 'react';
 import {
   ExternalLink,
@@ -95,12 +95,10 @@ function TocBlock({ text }: { text: string }) {
 
           return (
             <div key={it.key} className={`flex items-baseline ${indentClass}`}>
-              {/* keep one line so leader/page align perfectly; full title on hover */}
               <span className={`min-w-0 truncate ${titleClass}`} title={it.title}>
                 {it.title}
               </span>
 
-              {/* dotted leader auto-fills remaining width */}
               {it.page ? (
                 <>
                   <span
@@ -132,6 +130,32 @@ export default function Home() {
   // ✅ About-carousel (single-card slider)
   const [aboutActive, setAboutActive] = useState(0);
   const touchStartX = useRef<number | null>(null);
+
+  // ✅ measure Overview card height and apply it to the other slides
+  const overviewCardRef = useRef<HTMLDivElement>(null);
+  const [aboutFixedHeight, setAboutFixedHeight] = useState<number | null>(null);
+
+  const measureOverviewHeight = () => {
+    const el = overviewCardRef.current;
+    if (!el) return;
+    const h = Math.ceil(el.getBoundingClientRect().height);
+    if (h > 0) setAboutFixedHeight(h);
+  };
+
+  useLayoutEffect(() => {
+    // measure after layout; also re-measure shortly after (fonts/layout settle)
+    requestAnimationFrame(measureOverviewHeight);
+    const t = window.setTimeout(measureOverviewHeight, 80);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => requestAnimationFrame(measureOverviewHeight);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     getVisitorCount().then(setVisitorCount);
@@ -371,21 +395,9 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
         </div>
       ),
     },
-    {
-      heading: 'Table of Contents',
-      sub: 'Parts A–B',
-      body: <TocBlock text={tocAB} />,
-    },
-    {
-      heading: 'Table of Contents',
-      sub: 'Parts C–D',
-      body: <TocBlock text={tocCD} />,
-    },
-    {
-      heading: 'Appendix',
-      sub: 'Crash Courses & Proofs',
-      body: <TocBlock text={tocApp} />,
-    },
+    { heading: 'Table of Contents', sub: 'Parts A–B', body: <TocBlock text={tocAB} /> },
+    { heading: 'Table of Contents', sub: 'Parts C–D', body: <TocBlock text={tocCD} /> },
+    { heading: 'Appendix', sub: 'Crash Courses & Proofs', body: <TocBlock text={tocApp} /> },
   ];
 
   const goAbout = (i: number) => {
@@ -412,9 +424,8 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     if (dx < -50) nextAbout();
   };
 
-  // ✅ fixed slide-card height so TOC cards are as “long” as Overview.
-  // Feel free to tweak these numbers if you want more/less height.
-  const SLIDE_CARD_H = 'h-[560px] md:h-[620px]';
+  const baseSlideCardClass =
+    'rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm';
 
   return (
     <div className="min-h-screen transition-colors duration-200 bg-[#F8F2FF] dark:bg-slate-900">
@@ -530,37 +541,56 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             >
               {aboutSlides.map((s, idx) => (
                 <div key={idx} className="w-full flex-none">
-                  {/* ✅ fixed-height card + internal scroll */}
-                  <div
-                    className={`rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm flex flex-col ${SLIDE_CARD_H}`}
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                          {s.heading}
-                        </h3>
-                        {s.sub ? (
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{s.sub}</p>
-                        ) : null}
+                  {/* ✅ Slide 1: original behavior (no fixed height, no scroll)
+                      ✅ Slides 2+: fixed height = Slide 1, internal scroll */}
+                  {idx === 0 ? (
+                    <div ref={overviewCardRef} className={baseSlideCardClass}>
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                            {s.heading}
+                          </h3>
+                          {s.sub ? (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{s.sub}</p>
+                          ) : null}
+                        </div>
+
+                        <span className="mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
+                          {idx + 1} / {aboutSlides.length}
+                        </span>
                       </div>
 
-                      <span
-                        className={
-                          'mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ' +
-                          (idx === 0
-                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300'
-                            : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200')
-                        }
-                      >
-                        {idx + 1} / {aboutSlides.length}
-                      </span>
-                    </div>
-
-                    {/* ✅ this is the scroll container for ANY slide (Overview/TOC/Appendix) */}
-                    <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                      {/* no scroll wrapper */}
                       {s.body}
                     </div>
-                  </div>
+                  ) : (
+                    <div
+                      className={`${baseSlideCardClass} flex flex-col`}
+                      style={{
+                        height: aboutFixedHeight ? `${aboutFixedHeight}px` : undefined,
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                            {s.heading}
+                          </h3>
+                          {s.sub ? (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{s.sub}</p>
+                          ) : null}
+                        </div>
+
+                        <span className="mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          {idx + 1} / {aboutSlides.length}
+                        </span>
+                      </div>
+
+                      {/* scroll only on non-first slides */}
+                      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                        {s.body}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
