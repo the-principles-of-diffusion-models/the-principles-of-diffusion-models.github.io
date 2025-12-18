@@ -4,9 +4,9 @@ import { supabase } from '../lib/supabase';
 
 interface Comment {
   id: string;
-  name: string;
+  author_name: string;
   email: string;
-  comment: string;
+  content: string;
   created_at: string;
 }
 
@@ -63,7 +63,11 @@ export default function CommentsSection() {
 
     const { error: submitError } = await supabase
       .from('comments')
-      .insert([{ name: displayName, email: email.trim(), comment: comment.trim() }]);
+      .insert([{ 
+        author_name: displayName, 
+        email: email.trim(), 
+        content: comment.trim() 
+      }]);
 
     if (submitError) {
       console.error('Error submitting comment:', submitError);
@@ -177,14 +181,14 @@ export default function CommentsSection() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {c.name || 'Anonymous'}
+                  {c.author_name || 'Anonymous'}
                 </span>
                 <span className="text-sm text-slate-500 dark:text-slate-400">
                   {new Date(c.created_at).toLocaleDateString()}
                 </span>
               </div>
               <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                {c.comment}
+                {c.content}
               </p>
             </div>
           ))
