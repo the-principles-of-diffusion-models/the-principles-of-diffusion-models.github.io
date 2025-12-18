@@ -24,16 +24,13 @@ export default function Errata() {
       setError(null);
 
       try {
-        // Cache-bust to avoid CDN/browser caching hiding fresh updates
         const bust = `?v=${Date.now()}`;
 
-        // Try cheap HEAD first
         let res = await fetch(`${ERRATA_URL}${bust}`, {
           method: "HEAD",
           cache: "no-store",
         });
 
-        // Some hosts don’t allow HEAD; fall back to a minimal GET (1 byte)
         if (!res.ok || !res.headers.get("last-modified")) {
           res = await fetch(`${ERRATA_URL}${bust}`, {
             method: "GET",
@@ -82,10 +79,10 @@ export default function Errata() {
           Back to Home
         </Link>
 
-        {/* ✅ round icon LEFT of title */}
-        <div className="mt-6 flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
-            <FileWarning className="h-7 w-7" />
+        {/* ✅ BIGGER round icon LEFT of title */}
+        <div className="mt-6 flex items-center gap-5">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+            <FileWarning className="h-10 w-10" />
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -107,10 +104,7 @@ export default function Errata() {
             rel="noopener noreferrer"
             className="group flex items-center gap-4 rounded-xl p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60"
           >
-            {/* PDF logo (icon) */}
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
-              <FileWarning className="h-6 w-6" />
-            </div>
+            {/* ✅ removed the second icon entirely */}
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
