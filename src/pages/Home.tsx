@@ -270,8 +270,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
       ),
     },
     {
-      heading: 'Table of Contents',
-      sub: 'Parts A–B',
+      heading: 'Table of Contents: Parts A–B',
       body: (
         <pre className="whitespace-pre-wrap bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4 text-xs font-mono text-slate-800 dark:text-slate-100 leading-relaxed max-h-[420px] overflow-y-auto">
           {tocAB}
@@ -279,8 +278,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
       ),
     },
     {
-      heading: 'Table of Contents',
-      sub: 'Parts C–D',
+      heading: 'Table of Contents: Parts C–D',
       body: (
         <pre className="whitespace-pre-wrap bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4 text-xs font-mono text-slate-800 dark:text-slate-100 leading-relaxed max-h-[420px] overflow-y-auto">
           {tocCD}
