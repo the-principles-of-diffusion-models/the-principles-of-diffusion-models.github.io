@@ -81,7 +81,7 @@ export default function Errata() {
           Errata
         </h1>
         <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-700 dark:text-slate-300">
-          Corrections and updates to the monograph. The PDF below is the source of truth.
+          The PDF below lists corrections and updates to the book and points out the errata.
         </p>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
