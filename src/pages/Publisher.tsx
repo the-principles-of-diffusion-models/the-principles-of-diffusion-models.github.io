@@ -30,7 +30,7 @@ export default function Publisher() {
             The publisher version is not yet available.
           </p>
           <p className="text-slate-500">
-            Once the publisher is finalized, this page will link to the official published version.
+            After the book is officially published by the publisher (with a physical print edition), this page will be updated to link to the official published version.
           </p>
         </div>
       </div>
