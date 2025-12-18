@@ -158,8 +158,7 @@ B Origins and Foundations of Diffusion Models 30
 4.2 Score SDE: Its Training and Sampling . . . . . . . . . . . . . . 105
 4.3 Instantiations of SDEs . . . . . . . . . . . . . . . . . . . . . . . 110
 4.4 (Optional) Rethinking Forward Kernels in Score-Based and Variational Diffusion Models . . . . . . . . . . . . . . . . . . . . . . 115
-4.5 (Optional) Fokker–Planck Equation and Reverse-Time SDEs
-via Marginalization and Bayes’ Rule . . . . . . . . . . . . . . . 121
+4.5 (Optional) Fokker–Planck Equation and Reverse-Time SDEs via Marginalization and Bayes’ Rule . . . . . . . . . . . . . . . 121
 4.6 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 126
 5 Flow-Based Perspective: From NFs to Flow Matching 127
 5.1 Flow-Based Models: Normalizing Flows and Neural ODEs . . . . 129
@@ -186,8 +185,7 @@ via Marginalization and Bayes’ Rule . . . . . . . . . . . . . . . 121
 8.2 Classifier Guidance . . . . . . . . . . . . . . . . . . . . . . . . . 232
 8.3 Classifier-Free Guidance . . . . . . . . . . . . . . . . . . . . . . 235
 8.4 (Optional) Training-Free Guidance . . . . . . . . . . . . . . . . 238
-8.5 From Reinforcement Learning to Direct Preference Optimization
-for Model Alignment . . . . . . . . . . . . . . . . . . . . . . . . 243
+8.5 From Reinforcement Learning to Direct Preference Optimization for Model Alignment . . . . . . . . . . . . . . . . . . . . . . . . 243
 8.6 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 253
 9 Sophisticated Solvers for Fast Sampling 254
 9.1 Prologue . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 255
@@ -218,14 +216,11 @@ A Crash Course on Differential Equations 382
 A.1 Foundation of Ordinary Differential Equations . . . . . . . . . . 383
 A.2 Foundation of Stochastic Differential Equations . . . . . . . . . 394
 B Density Evolution: From Change of Variable to Fokker–Planck 398
-B.1 Change-of-Variable Formula:
-From Deterministic Maps to Stochastic Flows . . . . . . . . . . 399
+B.1 Change-of-Variable Formula: From Deterministic Maps to Stochastic Flows . . . . . . . . . . 399
 B.2 Intuition of the Continuity Equation . . . . . . . . . . . . . . . 409
-C Behind the Scenes of Diffusion Models:
-Itô’s Calculus and Girsanov’s Theorem 412
+C Behind the Scenes of Diffusion Models: Itô’s Calculus and Girsanov’s Theorem 412
 C.1 Itô’s Formula: The Chain Rule for Random Processes . . . . . . 413
-C.2 Change-of-Variable For Measures: Girsanov’s Theorem in Diffusion
-Models . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 422
+C.2 Change-of-Variable For Measures: Girsanov’s Theorem in Diffusion Models . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 422
 D Supplementary Materials and Proofs 426
 D.1 Variational Perspective . . . . . . . . . . . . . . . . . . . . . . 426
 D.2 Score-Based Perspective . . . . . . . . . . . . . . . . . . . . . . 430
