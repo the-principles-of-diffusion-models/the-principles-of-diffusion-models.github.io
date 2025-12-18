@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MessageSquare, Send, Reply, ThumbsUp, ThumbsDown, Link2, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 
 interface CommentRow {
@@ -602,3 +601,4 @@ export default function CommentsSection() {
     </div>
   );
 }
+
