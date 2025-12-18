@@ -360,8 +360,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     body: JSX.Element;
   }> = [
     {
-      heading: 'Overview',
-      sub: 'About the book',
+      heading: 'Overview: About the Book',
       body: (
         <div className="text-slate-700 dark:text-slate-300 leading-relaxed space-y-4">
           <p>
@@ -394,9 +393,9 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
         </div>
       ),
     },
-    { heading: 'Table of Contents', sub: 'Parts A–B', body: <TocBlock text={tocAB} /> },
-    { heading: 'Table of Contents', sub: 'Parts C–D', body: <TocBlock text={tocCD} /> },
-    { heading: 'Appendix', sub: 'Crash Courses & Proofs', body: <TocBlock text={tocApp} /> },
+    { heading: 'Table of Contents: Parts A–B', body: <TocBlock text={tocAB} /> },
+    { heading: 'Table of Contents: Parts C–D', body: <TocBlock text={tocCD} /> },
+    { heading: 'Appendix: Crash Courses & Proofs', body: <TocBlock text={tocApp} /> },
   ];
 
   const goAbout = (i: number) => {
