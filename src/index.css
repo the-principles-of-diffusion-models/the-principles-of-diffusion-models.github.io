@@ -2,19 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
-/* --- KaTeX dark-mode fix: force math to follow surrounding text color --- */
+/* ============================================================================
+   KaTeX Dark Mode Fix - Complete Solution
+   ============================================================================ */
+
+/* Force all KaTeX elements to inherit text color in dark mode */
 html.dark .katex,
+html.dark .katex-html,
 html.dark .katex-display {
   color: inherit !important;
 }
 
-html.dark .katex * {
+/* Apply to all child elements within KaTeX */
+html.dark .katex *,
+html.dark .katex-display * {
   color: inherit !important;
 }
 
-/* Fix borders for things like \boxed */
-html.dark .katex .fbox {
+/* Fix borders for boxed formulas like \boxed{} */
+html.dark .katex .fbox,
+html.dark .katex .boxed {
   border-color: currentColor !important;
 }
 
+/* Fix fraction lines */
+html.dark .katex .frac-line {
+  border-bottom-color: currentColor !important;
+}
 
+/* Fix square root lines */
+html.dark .katex .sqrt > .root {
+  border-top-color: currentColor !important;
+}
+
+/* Fix rule lines (horizontal lines) */
+html.dark .katex .rule {
+  background-color: currentColor !important;
+}
