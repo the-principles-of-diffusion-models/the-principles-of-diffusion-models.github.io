@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { TouchEvent } from 'react';
 import {
   ExternalLink,
@@ -38,9 +38,10 @@ const PART_TITLES = [
 ];
 
 function stripDotLeaders(s: string) {
-  // remove sequences like ". . . . . . . ." but keep numbering like "1.1"
+  // ✅ Remove sequences like ". . ." or ". . . . . . ."
+  // ✅ Keep numbering like "11.3" / "A.1" (no spaces around the dot, so it won't match).
   return s
-    .replace(/(\s*\.\s*){4,}/g, ' ')
+    .replace(/\s*(?:\.\s*){2,}/g, ' ') // <-- FIX: 2+ not 4+
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -95,10 +96,12 @@ function TocBlock({ text }: { text: string }) {
 
           return (
             <div key={it.key} className={`flex items-baseline ${indentClass}`}>
+              {/* keep one line so leader/page align; full title on hover */}
               <span className={`min-w-0 truncate ${titleClass}`} title={it.title}>
                 {it.title}
               </span>
 
+              {/* dotted leader auto-fills remaining width */}
               {it.page ? (
                 <>
                   <span
@@ -131,31 +134,9 @@ export default function Home() {
   const [aboutActive, setAboutActive] = useState(0);
   const touchStartX = useRef<number | null>(null);
 
-  // ✅ measure Overview card height and apply it to the other slides
-  const overviewCardRef = useRef<HTMLDivElement>(null);
-  const [aboutFixedHeight, setAboutFixedHeight] = useState<number | null>(null);
-
-  const measureOverviewHeight = () => {
-    const el = overviewCardRef.current;
-    if (!el) return;
-    const h = Math.ceil(el.getBoundingClientRect().height);
-    if (h > 0) setAboutFixedHeight(h);
-  };
-
-  useLayoutEffect(() => {
-    // measure after layout; also re-measure shortly after (fonts/layout settle)
-    requestAnimationFrame(measureOverviewHeight);
-    const t = window.setTimeout(measureOverviewHeight, 80);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const onResize = () => requestAnimationFrame(measureOverviewHeight);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // ✅ Measure Overview card height; use it as fixed height for TOC cards
+  const overviewCardRef = useRef<HTMLDivElement | null>(null);
+  const [overviewHeight, setOverviewHeight] = useState<number | null>(null);
 
   useEffect(() => {
     getVisitorCount().then(setVisitorCount);
@@ -167,6 +148,24 @@ export default function Home() {
         sessionStorage.removeItem('scrollToTab');
       }, 100);
     }
+  }, []);
+
+  useEffect(() => {
+    const el = overviewCardRef.current;
+    if (!el) return;
+
+    const update = () => setOverviewHeight(el.getBoundingClientRect().height);
+
+    update();
+
+    const ro = new ResizeObserver(() => update());
+    ro.observe(el);
+
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+    };
   }, []);
 
   const bibtex = `@article{lai2025principles,
@@ -361,7 +360,8 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     body: JSX.Element;
   }> = [
     {
-      heading: 'Overview: About the Book',
+      heading: 'Overview',
+      sub: 'About the book',
       body: (
         <div className="text-slate-700 dark:text-slate-300 leading-relaxed space-y-4">
           <p>
@@ -394,9 +394,9 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
         </div>
       ),
     },
-    { heading: 'Table of Contents: Parts A–B', body: <TocBlock text={tocAB} /> },
-    { heading: 'Table of Contents: Parts C–D', body: <TocBlock text={tocCD} /> },
-    { heading: 'Appendix: Crash Courses & Proofs', body: <TocBlock text={tocApp} /> },
+    { heading: 'Table of Contents', sub: 'Parts A–B', body: <TocBlock text={tocAB} /> },
+    { heading: 'Table of Contents', sub: 'Parts C–D', body: <TocBlock text={tocCD} /> },
+    { heading: 'Appendix', sub: 'Crash Courses & Proofs', body: <TocBlock text={tocApp} /> },
   ];
 
   const goAbout = (i: number) => {
@@ -422,9 +422,6 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     if (dx > 50) prevAbout();
     if (dx < -50) nextAbout();
   };
-
-  const baseSlideCardClass =
-    'rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm';
 
   return (
     <div className="min-h-screen transition-colors duration-200 bg-[#F8F2FF] dark:bg-slate-900">
@@ -538,36 +535,23 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
               className="flex transition-transform duration-500 ease-out"
               style={{ transform: `translateX(-${aboutActive * 100}%)` }}
             >
-              {aboutSlides.map((s, idx) => (
-                <div key={idx} className="w-full flex-none">
-                  {/* ✅ Slide 1: original behavior (no fixed height, no scroll)
-                      ✅ Slides 2+: fixed height = Slide 1, internal scroll */}
-                  {idx === 0 ? (
-                    <div ref={overviewCardRef} className={baseSlideCardClass}>
-                      <div className="flex items-start justify-between gap-3 mb-4">
-                        <div>
-                          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                            {s.heading}
-                          </h3>
-                          {s.sub ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{s.sub}</p>
-                          ) : null}
-                        </div>
+              {aboutSlides.map((s, idx) => {
+                const isOverview = idx === 0;
 
-                        <span className="mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
-                          {idx + 1} / {aboutSlides.length}
-                        </span>
-                      </div>
-
-                      {/* no scroll wrapper */}
-                      {s.body}
-                    </div>
-                  ) : (
+                return (
+                  <div key={idx} className="w-full flex-none">
                     <div
-                      className={`${baseSlideCardClass} flex flex-col`}
-                      style={{
-                        height: aboutFixedHeight ? `${aboutFixedHeight}px` : undefined,
-                      }}
+                      ref={isOverview ? overviewCardRef : undefined}
+                      className={
+                        'rounded-2xl border border-slate-200 dark:border-slate-700 ' +
+                        'bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm ' +
+                        (isOverview ? '' : 'flex flex-col')
+                      }
+                      style={
+                        !isOverview && overviewHeight
+                          ? { height: overviewHeight }
+                          : undefined
+                      }
                     >
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <div>
@@ -579,19 +563,30 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                           ) : null}
                         </div>
 
-                        <span className="mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        <span
+                          className={
+                            'mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ' +
+                            (idx === 0
+                              ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300'
+                              : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200')
+                          }
+                        >
                           {idx + 1} / {aboutSlides.length}
                         </span>
                       </div>
 
-                      {/* scroll only on non-first slides */}
-                      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-                        {s.body}
-                      </div>
+                      {/* ✅ NO scroll on Overview; ✅ scroll only for TOC/Appendix, height fixed to Overview */}
+                      {isOverview ? (
+                        s.body
+                      ) : (
+                        <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                          {s.body}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
