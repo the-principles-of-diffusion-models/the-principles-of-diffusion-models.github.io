@@ -236,8 +236,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
 
   const aboutSlides = [
     {
-      heading: 'About This Book',
-      sub: 'Overview',
+      heading: 'Overview',
       body: (
         <div className="text-slate-700 dark:text-slate-300 leading-relaxed space-y-4">
           <p>
@@ -396,9 +395,6 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
           </div>
 
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Swipe / click arrows to browse. (One card per view.)
-            </p>
 
             <div className="flex items-center gap-2">
               <button
