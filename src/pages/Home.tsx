@@ -1,5 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
-import { ExternalLink, BookOpen, FileText, GraduationCap, Copy, Check, Users, Mail, Newspaper, Library, Feather, Quote } from 'lucide-react';
+import {
+  ExternalLink,
+  BookOpen,
+  FileText,
+  GraduationCap,
+  Copy,
+  Check,
+  Users,
+  Mail,
+  Newspaper,
+  Library,
+  Feather,
+  Quote,
+  FileWarning, // ✅ new icon for Errata
+} from 'lucide-react';
 import { getVisitorCount } from '../lib/visitorTracking';
 import ScrollToTop from '../components/ScrollToTop';
 import CommentsSection from '../components/CommentsSection';
@@ -68,6 +82,7 @@ export default function Home() {
     },
   ];
 
+  // ✅ Row 1: add Errata next to Teaching Guide
   const tabsRow1: Tab[] = [
     {
       id: 'arxiv',
@@ -89,6 +104,13 @@ export default function Home() {
       icon: GraduationCap,
       type: 'internal',
       path: '/teaching',
+    },
+    {
+      id: 'errata',
+      label: 'Errata',
+      icon: FileWarning, // ✅ looks nice for corrections
+      type: 'internal',
+      path: '/errata',
     },
   ];
 
@@ -316,5 +338,3 @@ export default function Home() {
     </div>
   );
 }
-
-
