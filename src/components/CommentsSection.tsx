@@ -40,10 +40,6 @@ export default function CommentsSection() {
     setError('');
 
     // Validation
-    if (!name.trim()) {
-      setError('Name is required');
-      return;
-    }
     if (!email.trim()) {
       setError('Email is required');
       return;
@@ -62,9 +58,12 @@ export default function CommentsSection() {
 
     setIsSubmitting(true);
 
+    // Use "Anonymous" if name is empty
+    const displayName = name.trim() || 'Anonymous';
+
     const { error: submitError } = await supabase
       .from('comments')
-      .insert([{ name: name.trim(), email: email.trim(), comment: comment.trim() }]);
+      .insert([{ name: displayName, email: email.trim(), comment: comment.trim() }]);
 
     if (submitError) {
       console.error('Error submitting comment:', submitError);
@@ -95,23 +94,22 @@ export default function CommentsSection() {
 
       {/* Comment Form */}
       <form onSubmit={handleSubmit} className="space-y-4 mb-8">
-        {/* Name Field */}
+        {/* Name Field - OPTIONAL */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Name <span className="text-red-500">*</span>
+            Name <span className="text-slate-400 text-xs">(optional)</span>
           </label>
           <input
             id="name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-            required
+            placeholder="Your name (leave empty for Anonymous)"
             className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
           />
         </div>
 
-        {/* Email Field */}
+        {/* Email Field - REQUIRED */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Email <span className="text-red-500">*</span>
@@ -127,7 +125,7 @@ export default function CommentsSection() {
           />
         </div>
 
-        {/* Comment Field */}
+        {/* Comment Field - REQUIRED */}
         <div>
           <label htmlFor="comment" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Comment <span className="text-red-500">*</span>
@@ -179,7 +177,7 @@ export default function CommentsSection() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {c.name}
+                  {c.name || 'Anonymous'}
                 </span>
                 <span className="text-sm text-slate-500 dark:text-slate-400">
                   {new Date(c.created_at).toLocaleDateString()}
