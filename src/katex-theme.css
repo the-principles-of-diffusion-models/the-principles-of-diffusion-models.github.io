@@ -1,0 +1,22 @@
+/* Force KaTeX to follow surrounding text color (works with Tailwind dark mode). */
+.katex,
+.katex-display {
+  color: inherit;
+}
+
+/* If KaTeX CSS gets loaded after, this still wins in dark mode. */
+.dark .katex,
+.dark .katex-display {
+  color: inherit !important;
+}
+
+/* Some KaTeX rules draw borders/lines; make them visible in dark mode too. */
+.dark .katex .fbox {
+  border-color: currentColor !important;
+}
+
+/* Safety: if any KaTeX output uses svg paths, force them to currentColor. */
+.dark .katex svg * {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
