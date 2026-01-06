@@ -639,6 +639,28 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-slate-500">
               <div className="flex items-start justify-between mb-2">
                 <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                  2026/01/05
+                </span>
+              </div>
+
+              <p className="text-slate-700 dark:text-slate-300">
+                Our book will be adopted to CMU&apos;s course
+                <br />
+                <a
+                  href="https://kellyyutonghe.github.io/10799S26/resources/"
+                  className="underline hover:no-underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  CMU 10-799 Diffusion &amp; Flow Matching
+                </a>
+              </p>
+            </div>
+
+
+            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-slate-500">
+              <div className="flex items-start justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
                   2025/12/16
                 </span>
               </div>
