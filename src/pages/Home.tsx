@@ -644,7 +644,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
               </div>
 
               <p className="text-slate-700 dark:text-slate-300">
-                Our book is being adopted for a CMU&apos;s course
+                Our book is being adopted for a CMU&apos;s course{" "}
                 <a
                   href="https://kellyyutonghe.github.io/10799S26/resources/"
                   className="underline hover:no-underline"
