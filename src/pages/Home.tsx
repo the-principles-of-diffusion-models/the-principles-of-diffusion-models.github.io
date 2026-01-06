@@ -644,8 +644,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
               </div>
 
               <p className="text-slate-700 dark:text-slate-300">
-                Our book will be adopted to CMU&apos;s course
-                <br />
+                Our book is being adopted for a CMU&apos;s course
                 <a
                   href="https://kellyyutonghe.github.io/10799S26/resources/"
                   className="underline hover:no-underline"
@@ -654,6 +653,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                 >
                   CMU 10-799 Diffusion &amp; Flow Matching
                 </a>
+                !
               </p>
             </div>
 
