@@ -1,0 +1,46 @@
+name: Generate favicons
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "public/mawmaw-japan.png"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Generate favicons
+        run: |
+          set -euxo pipefail
+          test -f public/mawmaw-japan.png
+
+          magick public/mawmaw-japan.png -resize 48x48 public/favicon-48.png
+          magick public/mawmaw-japan.png -resize 96x96 public/favicon-96.png
+          magick public/mawmaw-japan.png -define icon:auto-resize=16,24,32,48,64,128,256 public/favicon.ico
+
+      - name: Commit and push if changed
+        run: |
+          set -euxo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/favicon-48.png public/favicon-96.png public/favicon.ico
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Generate favicons from mawmaw-japan.png"
+          git push
