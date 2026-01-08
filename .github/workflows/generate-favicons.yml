@@ -18,6 +18,7 @@ jobs:
 
       - name: Install ImageMagick
         run: |
+          set -euxo pipefail
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
@@ -26,9 +27,25 @@ jobs:
           set -euxo pipefail
           test -f public/mawmaw-japan.png
 
-          magick public/mawmaw-japan.png -resize 48x48 public/favicon-48.png
-          magick public/mawmaw-japan.png -resize 96x96 public/favicon-96.png
-          magick public/mawmaw-japan.png -define icon:auto-resize=16,24,32,48,64,128,256 public/favicon.ico
+          # Pick whichever ImageMagick entrypoint exists on this runner
+          if command -v magick >/dev/null 2>&1; then
+            IM="magick"
+          elif command -v convert >/dev/null 2>&1; then
+            IM="convert"
+          elif command -v magick-im6.q16 >/dev/null 2>&1; then
+            IM="magick-im6.q16"
+          else
+            echo "No ImageMagick command found in PATH"
+            exit 1
+          fi
+
+          echo "Using ImageMagick command: $IM"
+          $IM public/mawmaw-japan.png -resize 48x48 public/favicon-48.png
+          $IM public/mawmaw-japan.png -resize 96x96 public/favicon-96.png
+
+          # For .ico: with 'magick', use 'magick input -define ... output'
+          # With 'convert', it's the same invocation.
+          $IM public/mawmaw-japan.png -define icon:auto-resize=16,24,32,48,64,128,256 public/favicon.ico
 
       - name: Commit and push if changed
         run: |
