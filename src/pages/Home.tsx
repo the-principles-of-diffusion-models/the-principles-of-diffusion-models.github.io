@@ -219,7 +219,7 @@ export default function Home() {
       twitter: 'https://x.com/JCJesseLai',
     },
     { name: 'Yang Song', emails: ['thusongyang@gmail.com'] },
-    { name: 'Dongjun Kim', emails: ['dongjun@stanford.edu'] },
+    { name: 'Dongjun Kim', emails: ['partitionsofunity@gmail.com'] },
     { name: 'Yuki Mitsufuji', emails: ['yuhki.mitsufuji@sony.com'] },
     { name: 'Stefano Ermon', emails: ['ermon@cs.stanford.edu'] },
   ];
