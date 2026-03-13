@@ -213,7 +213,7 @@ export default function Home() {
       icon: Feather,
       type: 'internal',
       path: '/blog',
-      badge: 'ICLR 2026',
+      badge: "ICLR'26 Blog Post Track",
     },
     {
       id: 'teaching',
@@ -603,9 +603,9 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
               </p>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-orange-500">
+            <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4 border-l-4 border-violet-500">
               <div className="flex items-start justify-between mb-2">
-                <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">
                   2026/06/03
                 </span>
               </div>
@@ -614,7 +614,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                 Check out the{" "}
                 <a
                   href="https://cvpr.thecvf.com/virtual/2026/tutorial/36147"
-                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                  className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 underline underline-offset-2"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -623,7 +623,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                 {" "}and{" "}
                 <a
                   href="https://sites.google.com/view/cvpr26-principles-of-diffusion/home"
-                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                  className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 underline underline-offset-2"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -716,7 +716,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                       <Icon className="w-5 h-5" />
                       {tab.label}
                       {tab.badge && (
-                        <span className="ml-1 inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none bg-white/25 text-white ring-1 ring-white/30">
+                        <span className="ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold leading-none bg-amber-300 text-amber-900 shadow-sm">
                           {tab.badge}
                         </span>
                       )}
@@ -737,7 +737,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                       <Icon className="w-5 h-5" />
                       {tab.label}
                       {tab.badge && (
-                        <span className="ml-1 inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none bg-white/25 text-white ring-1 ring-white/30">
+                        <span className="ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold leading-none bg-amber-300 text-amber-900 shadow-sm">
                           {tab.badge}
                         </span>
                       )}
