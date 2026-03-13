@@ -23,6 +23,12 @@ import ScrollToTop from '../components/ScrollToTop';
 import CommentsSection from '../components/CommentsSection';
 import DarkModeToggle from '../components/DarkModeToggle';
 
+// Injected at build time by Vite (see vite.config.ts).
+// Falls back to current date if not defined (e.g., during local dev).
+const BUILD_DATE = typeof __BUILD_TIMESTAMP__ !== 'undefined'
+  ? __BUILD_TIMESTAMP__
+  : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
 /* =========================
    TOC helpers (dot leaders + font sizing)
    ========================= */
@@ -430,6 +436,15 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             From Origins to Advances
           </p>
         </header>
+
+        <div className="flex justify-center mb-8">
+          <span className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" />
+            </svg>
+            Last updated: {BUILD_DATE}
+          </span>
+        </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-6 mb-8">
           <div className="flex items-center gap-3 mb-4">
