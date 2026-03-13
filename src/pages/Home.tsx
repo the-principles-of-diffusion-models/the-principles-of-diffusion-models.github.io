@@ -42,8 +42,6 @@ const ARXIV_PDF_BASE = 'https://arxiv.org/pdf/2510.21890';
 const PDF_PAGE_OFFSET = 5; // <-- change to 0 if you don't need +5
 
 function stripDotLeaders(s: string) {
-  // Remove sequences like ". . ." or ". . . . . . ."
-  // Keep numbering like "11.3" / "A.1" (no spaces around the dot, so it won't match).
   return s
     .replace(/\s*(?:\.\s*){2,}/g, ' ')
     .replace(/\s+/g, ' ')
@@ -51,7 +49,6 @@ function stripDotLeaders(s: string) {
 }
 
 function fixMissingSpaceBeforePage(line: string) {
-  // handles cases like "...Distributions148" -> "...Distributions 148"
   return line.replace(/([^\d\s])(\d{1,4})\s*$/, '$1 $2').trim();
 }
 
@@ -63,34 +60,25 @@ function parseToc(text: string) {
 
   return lines.map((raw, idx) => {
     const fixed = fixMissingSpaceBeforePage(raw);
-
-    // last token is page number (book page)
     const m = fixed.match(/^(.*?)(?:\s+)(\d{1,4})$/);
     const titleRaw = m ? m[1] : fixed;
     const pageRaw = m ? m[2] : '';
-
     const title = stripDotLeaders(titleRaw);
-
     const isPart = PART_TITLES.some((p) => title.startsWith(p));
     const isChapter =
-      !isPart && (/^\d+\s/.test(title) || /^[A-D]\s(?!\.)/.test(title)); // "1 ..." or "A Crash Course ..."
-    const isSection = /^\d+\.\d+/.test(title) || /^[A-D]\.\d+/.test(title); // "1.1 ..." or "A.1 ..."
-
+      !isPart && (/^\d+\s/.test(title) || /^[A-D]\s(?!\.)/.test(title));
+    const isSection = /^\d+\.\d+/.test(title) || /^[A-D]\.\d+/.test(title);
     const kind: TocKind = isPart ? 'part' : isChapter ? 'chapter' : isSection ? 'section' : 'section';
-
     const bookPage = pageRaw ? Number.parseInt(pageRaw, 10) : null;
     const pdfPage =
       typeof bookPage === 'number' && Number.isFinite(bookPage) ? bookPage + PDF_PAGE_OFFSET : null;
-
     const href = pdfPage ? `${ARXIV_PDF_BASE}#page=${pdfPage}` : null;
-
     return { key: `${idx}-${title}`, title, page: pageRaw, kind, href };
   });
 }
 
 function TocBlock({ text }: { text: string }) {
   const items = parseToc(text);
-
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
       <div className="space-y-1 font-mono">
@@ -101,12 +89,9 @@ function TocBlock({ text }: { text: string }) {
               : it.kind === 'chapter'
                 ? 'text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100'
                 : 'text-xs sm:text-sm text-slate-800 dark:text-slate-100';
-
           const indentClass = it.kind === 'section' ? 'pl-5' : 'pl-0';
-
           return (
             <div key={it.key} className={`flex items-baseline ${indentClass}`}>
-              {/* ✅ clickable title -> arXiv PDF page */}
               {it.href ? (
                 <a
                   href={it.href}
@@ -122,8 +107,6 @@ function TocBlock({ text }: { text: string }) {
                   {it.title}
                 </span>
               )}
-
-              {/* dotted leader auto-fills remaining width */}
               {it.page ? (
                 <>
                   <span
@@ -151,18 +134,13 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [visitorCount, setVisitorCount] = useState<number>(0);
   const accessBookRef = useRef<HTMLDivElement>(null);
-
-  // About-carousel (single-card slider)
   const [aboutActive, setAboutActive] = useState(0);
   const touchStartX = useRef<number | null>(null);
-
-  // Measure Overview card height; use it as fixed height for TOC cards
   const overviewCardRef = useRef<HTMLDivElement | null>(null);
   const [overviewHeight, setOverviewHeight] = useState<number | null>(null);
 
   useEffect(() => {
     getVisitorCount().then(setVisitorCount);
-
     const scrollToTab = sessionStorage.getItem('scrollToTab');
     if (scrollToTab && accessBookRef.current) {
       setTimeout(() => {
@@ -175,14 +153,10 @@ export default function Home() {
   useEffect(() => {
     const el = overviewCardRef.current;
     if (!el) return;
-
     const update = () => setOverviewHeight(el.getBoundingClientRect().height);
-
     update();
-
     const ro = new ResizeObserver(() => update());
     ro.observe(el);
-
     window.addEventListener('resize', update);
     return () => {
       ro.disconnect();
@@ -210,6 +184,7 @@ export default function Home() {
     type: 'external' | 'internal';
     url?: string;
     path?: string;
+    badge?: string;
   };
 
   const authors = [
@@ -234,10 +209,11 @@ export default function Home() {
     },
     {
       id: 'blog',
-      label: 'Blog Post (Compact)',
+      label: 'Blog Post',
       icon: Feather,
       type: 'internal',
       path: '/blog',
+      badge: 'ICLR 2026',
     },
     {
       id: 'teaching',
@@ -246,6 +222,9 @@ export default function Home() {
       type: 'internal',
       path: '/teaching',
     },
+  ];
+
+  const tabsRow2: Tab[] = [
     {
       id: 'errata',
       label: 'Errata',
@@ -253,9 +232,6 @@ export default function Home() {
       type: 'internal',
       path: '/errata',
     },
-  ];
-
-  const tabsRow2: Tab[] = [
     {
       id: 'read-online',
       label: 'Read Online',
@@ -305,7 +281,7 @@ B Origins and Foundations of Diffusion Models 30
 4.2 Score SDE: Its Training and Sampling . . . . . . . . . . . . . . 105
 4.3 Instantiations of SDEs . . . . . . . . . . . . . . . . . . . . . . . 110
 4.4 (Optional) Rethinking Forward Kernels in Score-Based and Variational Diffusion Models . . . . . . . . . . . . . . . . . . . . . . 115
-4.5 (Optional) Fokker–Planck Equation and Reverse-Time SDEs via Marginalization and Bayes’ Rule . . . . . . . . . . . . . . . 121
+4.5 (Optional) Fokker–Planck Equation and Reverse-Time SDEs via Marginalization and Bayes' Rule . . . . . . . . . . . . . . . 121
 4.6 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 126
 5 Flow-Based Perspective: From NFs to Flow Matching 127
 5.1 Flow-Based Models: Normalizing Flows and Neural ODEs . . . . 129
@@ -323,8 +299,8 @@ B Origins and Foundations of Diffusion Models 30
 7.1 Prologue of Distribution-to-Distribution Translation . . . . . . . 192
 7.2 Taxonomy of the Problem Setups . . . . . . . . . . . . . . . . . 194
 7.3 Relationship of Variant Optimal Transport Formulations . . . . . 206
-7.4 Is Diffusion Model’s SDE Optimal Solution to SB Problem? . . 212
-7.5 Is Diffusion Model’s ODE an Optimal Map to OT Problem? . . 216`;
+7.4 Is Diffusion Model's SDE Optimal Solution to SB Problem? . . 212
+7.5 Is Diffusion Model's ODE an Optimal Map to OT Problem? . . 216`;
 
   const tocCD = `C Sampling of Diffusion Models 224
 8 Guidance and Controllable Generation 226
@@ -363,11 +339,11 @@ A Crash Course on Differential Equations 382
 A.1 Foundation of Ordinary Differential Equations . . . . . . . . . . 383
 A.2 Foundation of Stochastic Differential Equations . . . . . . . . . 394
 B Density Evolution: From Change of Variable to Fokker–Planck 398
-B.1 Change-of-Variable Formula: From Deterministic Maps to Stochastic Flows . . . . . . . . . . 399
+B.1 Change-of-Variable Formula: From Deterministic Maps to Stochastic Flows . . . . . . . 399
 B.2 Intuition of the Continuity Equation . . . . . . . . . . . . . . . 409
-C Behind the Scenes of Diffusion Models: Itô’s Calculus and Girsanov’s Theorem 412
-C.1 Itô’s Formula: The Chain Rule for Random Processes . . . . . . 413
-C.2 Change-of-Variable For Measures: Girsanov’s Theorem in Diffusion Models . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 422
+C Behind the Scenes of Diffusion Models: Itô's Calculus and Girsanov's Theorem 412
+C.1 Itô's Formula: The Chain Rule for Random Processes . . . . . . 413
+C.2 Change-of-Variable For Measures: Girsanov's Theorem in Diffusion Models . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 422
 D Supplementary Materials and Proofs 426
 D.1 Variational Perspective . . . . . . . . . . . . . . . . . . . . . . . 426
 D.2 Score-Based Perspective . . . . . . . . . . . . . . . . . . . . . . 430
@@ -435,10 +411,8 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     const start = touchStartX.current;
     touchStartX.current = null;
     if (start == null) return;
-
     const end = e.changedTouches[0]?.clientX ?? start;
     const dx = end - start;
-
     if (dx > 50) prevAbout();
     if (dx < -50) nextAbout();
   };
@@ -555,7 +529,6 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             >
               {aboutSlides.map((s, idx) => {
                 const isOverview = idx === 0;
-
                 return (
                   <div key={idx} className="w-full flex-none">
                     <div
@@ -573,7 +546,6 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                             {s.heading}
                           </h3>
                         </div>
-
                         <span
                           className={
                             'mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ' +
@@ -585,7 +557,6 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                           {idx + 1} / {aboutSlides.length}
                         </span>
                       </div>
-
                       {isOverview ? s.body : <div className="flex-1 min-h-0 overflow-y-auto pr-1">{s.body}</div>}
                     </div>
                   </div>
@@ -611,10 +582,6 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
           </div>
         </div>
 
-        {/* the rest of your page stays the same */}
-        {/* ... (News & Updates, Access the Book, How to Cite, CommentsSection, footer) ... */}
-
-        {/* ✅ I’m keeping your existing code below untouched to avoid breaking anything */}
         {/* News & Updates */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 mb-8">
           <div className="flex items-center gap-3 mb-6">
@@ -633,6 +600,36 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
               </div>
               <p className="text-slate-700 dark:text-slate-300">
                 Publisher for physical print version is currently being sorted out. Stay tuned for updates on availability.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-orange-500">
+              <div className="flex items-start justify-between mb-2">
+                <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                  2026/06/03
+                </span>
+              </div>
+              <p className="text-slate-700 dark:text-slate-300">
+                We will give a tutorial at <strong>CVPR 2026</strong> based on the book, extended to cover discrete diffusion!
+                Check out the{" "}
+                <a
+                  href="https://cvpr.thecvf.com/virtual/2026/tutorial/36147"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  CVPR official page
+                </a>
+                {" "}and{" "}
+                <a
+                  href="https://sites.google.com/view/cvpr26-principles-of-diffusion/home"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  our tutorial project page
+                </a>
+                .
               </p>
             </div>
 
@@ -718,6 +715,11 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                     >
                       <Icon className="w-5 h-5" />
                       {tab.label}
+                      {tab.badge && (
+                        <span className="ml-1 inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none bg-white/25 text-white ring-1 ring-white/30">
+                          {tab.badge}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -734,6 +736,11 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                     >
                       <Icon className="w-5 h-5" />
                       {tab.label}
+                      {tab.badge && (
+                        <span className="ml-1 inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none bg-white/25 text-white ring-1 ring-white/30">
+                          {tab.badge}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
