@@ -429,10 +429,10 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
 
       <div className="max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-slate-900 dark:text-slate-100 mb-3 leading-tight">
+          <h1 className="text-6xl sm:text-7xl font-bold text-slate-900 dark:text-slate-100 mb-4 leading-tight">
             The Principles of Diffusion Models
           </h1>
-          <p className="text-2xl text-slate-700 dark:text-slate-300 font-medium mb-6">
+          <p className="text-3xl text-slate-700 dark:text-slate-300 font-medium mb-6">
             From Origins to Advances
           </p>
         </header>
