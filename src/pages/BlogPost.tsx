@@ -35,7 +35,7 @@ export default function BlogPost() {
           <div className="space-y-8">
             <section>
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300">
-                Modern diffusion models are often introduced through a long list of concepts and terms whose relationships are not immediately clear. Very quickly, one encounters names such as <em>DDPM, SDE, ODE, probability flow, flow matching, distillation, consistency, flow map</em>, together with phrases like <em>forward process, reverse process, score, velocity field, sampler</em>. For a reader encountering these ideas for the first time, this can be overwhelming.
+                Modern diffusion models are often introduced through a long list of concepts and terms whose relationships are not immediately clear. Very quickly, one encounters names such as <em>DDPM, SDE, ODE, probability flow, flow matching, rectified flow, distillation, consistency, flow map</em>, together with phrases like <em>forward process, reverse process, score, velocity field, sampler</em>. For a reader encountering these ideas for the first time, this can be overwhelming.
               </p>
 
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -51,7 +51,7 @@ export default function BlogPost() {
               </p>
 
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                We start with three common lenses on diffusion, <em>DDPM</em>, <em>score-based methods</em>, and <em>flow matching</em>. They share the same recipe: fix a simple <em>forward Gaussian noising process</em>, then learn to reverse it. The main difference is <em>what the network predicts</em>, such as noise, score, or velocity.
+                We start with three common lenses on diffusion, <em>DDPM</em>, <em>score-based methods</em>, and <em>flow matching/rectified flow</em>. They share the same recipe: fix a simple <em>forward Gaussian noising process</em>, then learn to reverse it. The main difference is <em>what the network predicts</em>, such as noise, score, or velocity.
               </p>
 
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -60,6 +60,19 @@ export default function BlogPost() {
 
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Finally, we focus on speed. Diffusion is <em>high fidelity</em> but often slow because sampling is iterative. We end with <em>flow map models</em>, which keep the same diffusion backbone but aim to learn <em>long time-jumps</em> of the probability-flow dynamics directly, replacing many tiny steps with a few big, accurate jumps.
+              </p>
+
+              <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                We also provide the full PDF and supplemental code on the page:{" "}
+                <a
+                  href="https://the-principles-of-diffusion-models.github.io/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  The Principles of Diffusion Models
+                </a>
+                .
               </p>
             </section>
 
@@ -113,7 +126,6 @@ export default function BlogPost() {
                 .
               </p>
 
-
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 <strong>Diffusion-style models</strong> follow a different philosophy. Instead of jumping directly from noise to data, they move in many <em>small increments</em>. More precisely, the construction consists of two coupled procedures:
               </p>
@@ -135,7 +147,6 @@ export default function BlogPost() {
                   />
                 </div>
 
-
                 <li className="leading-relaxed text-slate-700 dark:text-slate-300">
                   In the <strong>reverse process</strong>, the model learns to undo this artificial corruption step by step. Starting from pure noise, it applies a sequence of learned denoising updates that gradually reintroduce structure: coarse shapes first, then finer details. After enough steps, the final outputs resemble realistic data again. This reverse procedure is what we actually use at sampling time to turn noise into data.
                 </li>
@@ -151,7 +162,6 @@ export default function BlogPost() {
                     }}
                   />
                 </div>
-
               </ul>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -200,6 +210,47 @@ export default function BlogPost() {
               </ul>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Different choices of the pair <InlineMath math="(\alpha_t, \sigma_t)" /> give rise to different <em>noise schedules</em>. In practice, these fall into three broad families:
+              </p>
+
+              <ul className="space-y-4 my-4 list-disc list-inside">
+                <li className="leading-relaxed text-slate-700 dark:text-slate-300">
+                  <strong>Variance Preserving (VP):</strong> the schedules are chosen so that <InlineMath math="\alpha_t^2 + \sigma_t^2 = 1" /> for all <InlineMath math="t" />, meaning the total variance of <InlineMath math="\mathbf{x}_t" /> stays constant while the signal-to-noise ratio changes. Two common examples are the <em>DDPM linear-<InlineMath math="\beta" /> schedule</em>, where a linearly increasing noise rate <InlineMath math="\beta(t)" /> determines
+                  <BlockMath math="\alpha_t = \exp\!\left(-\frac{1}{2}\int_0^t \beta(s)\,\mathrm{d}s\right)," />
+                  and the <em>cosine schedule</em>, where
+                  <BlockMath math="\alpha_t = \cos\!\left(\frac{\pi t}{2}\right), \qquad \sigma_t = \sin\!\left(\frac{\pi t}{2}\right)." />
+                </li>
+
+                <li className="leading-relaxed text-slate-700 dark:text-slate-300">
+                  <strong>Variance Exploding (VE):</strong> the signal is left untouched, <InlineMath math="\alpha_t = 1" />, and noise is added with scale <InlineMath math="\sigma_t" />. A representative example is <em>EDM</em>, which uses <InlineMath math="\sigma_t = t" />, so that
+                  <BlockMath math="\mathbf{x}_t = \mathbf{x}_0 + t\,\boldsymbol{\epsilon}." />
+                  In other words, the data is never rescaled, only progressively buried under stronger noise.
+                </li>
+
+                <li className="leading-relaxed text-slate-700 dark:text-slate-300">
+                  <strong>Linear Interpolation:</strong> the simplest possible path,
+                  <BlockMath math="\alpha_t = 1 - t, \qquad \sigma_t = t," />
+                  which linearly interpolates between data and noise:
+                  <BlockMath math="\mathbf{x}_t = (1-t)\mathbf{x}_0 + t\,\boldsymbol{\epsilon}." />
+                  This is the default choice in <em>Flow Matching</em> and <em>Rectified Flow</em>.
+                </li>
+              </ul>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Despite these different conventions, the forward rule is always the same one-liner, <InlineMath math="\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol{\epsilon}" />, and only the shapes of the <InlineMath math="(\alpha_t, \sigma_t)" /> curves differ. The interactive panel below lets you compare these schedules side by side and see how each one progressively corrupts the same image.
+              </p>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/noise_schedule_explorer.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="820"
+                  loading="lazy"
+                  title="Noise Schedule Explorer"
+                />
+              </div>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 With this forward perturbation, we can view the data distribution as being "blurred" over time. The resulting time-dependent marginal density is
               </p>
 
@@ -238,56 +289,57 @@ export default function BlogPost() {
                 </li>
               </ul>
 
+              {/* ===== DDPM ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 DDPM: Predicting the Reverse Step via Noise or Mean
               </h4>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-                Denoising Diffusion Probabilistic Models (DDPM) are one of the earliest modern diffusion approaches. The main idea is simple: with the fixed forward noising process that gradually destroys data, it <em>trains a model to run this process in reverse</em>. DDPM formalizes this as a variational objective, so that learning to denoise step by step also corresponds to maximizing a likelihood-style training goal.
+                Denoising Diffusion Probabilistic Models (DDPM) are one of the earliest modern diffusion approaches. The core idea is simple: we first choose a <em>fixed forward noising process</em> that gradually destroys data, and then train a model to <em>run this process in reverse</em>. DDPM casts this into a variational objective, so learning to denoise step by step also becomes a likelihood-style training problem.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                In DDPM, we work with a <em>discrete</em> set of noise levels, for example integer times <InlineMath math="t = 0, 1, \dots, T" />. The <em>forward</em> process gradually increases the noise level so that <InlineMath math="\mathbf{x}_T" /> is (almost) standard Gaussian.
+                In DDPM, we work with a <em>discrete</em> set of noise levels, for example integer times <InlineMath math="t = 0, 1, \dots, T" />. The forward process gradually increases the noise so that <InlineMath math="\mathbf{x}_T" /> is approximately standard Gaussian.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Conceptually, what we would like to have is the <em>oracle reverse transition kernel</em> that undoes this forward corruption:
+                Conceptually, what we would really like to know is the <em>oracle reverse transition kernel</em>
               </p>
 
               <BlockMath math="p(\mathbf{x}_{t-1} \mid \mathbf{x}_t), \quad t = T, T-1, \dots, 1," />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                so that if we start from <InlineMath math="\mathbf{x}_T \sim \mathcal{N}(\mathbf{0}, \mathbf{I})" /> and keep sampling backwards
+                because then we could start from Gaussian noise <InlineMath math="\mathbf{x}_T \sim \mathcal{N}(\mathbf{0}, \mathbf{I})" /> and sample backward
               </p>
 
               <BlockMath math="\mathbf{x}_T \to \mathbf{x}_{T-1} \to \cdots \to \mathbf{x}_0," />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                the final <InlineMath math="\mathbf{x}_0" /> looks like a real data sample.
+                until the final <InlineMath math="\mathbf{x}_0" /> looks like a real data sample.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                To make the generative process work, we would like to learn the true reverse kernel <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" />, by fitting a parametric model <InlineMath math="p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" /> and minimizing the expected KL
+                So the learning problem seems straightforward: fit a parametric reverse kernel <InlineMath math="p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" /> to the true one by minimizing
               </p>
 
               <BlockMath math="\mathbb{E}_{p_t(\mathbf{x}_t)} \big[ \mathcal{D}_{\mathrm{KL}}\big(p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t)\big) \big]." />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                At first sight, this looks hopeless: the marginal reverse kernel
+                But here comes the difficulty. The reverse kernel we want, <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" />, is not something simple we can write down directly. It is obtained by averaging over <em>all possible clean images</em> that might have produced the noisy sample <InlineMath math="\mathbf{x}_t" />:
               </p>
 
-              <BlockMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t) = \int p(\mathbf{x}_{t-1}\mid \mathbf{x}_t,\mathbf{x}_0)\,p_{\text{data}}(\mathbf{x}_0)\mathrm{d}\mathbf{x}_0" />
+              <BlockMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t) = \int p(\mathbf{x}_{t-1}\mid \mathbf{x}_t,\mathbf{x}_0)\,p_{\text{data}}(\mathbf{x}_0)\mathrm{d}\mathbf{x}_0." />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                is a complicated <em>mixture of Gaussians</em> over all possible clean images <InlineMath math="\mathbf{x}_0" />, and we never see it in closed form.
-              </p>
-
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                The key move, which we call the <em>conditional trick</em>, is to <em>condition on the clean data</em> <InlineMath math="\mathbf{x}_0" /> to obtain a tractable regression target. Because the forward process is Markov and Gaussian, the conditional kernel <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t, \mathbf{x}_0)" /> is itself a single Gaussian with a closed-form mean and variance.
+                So this marginal reverse kernel is a complicated <em>mixture of Gaussians</em>, and at first sight it looks hopeless to learn directly.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                A neat calculation shows that the original "impossible" objective can be rewritten as
+                The key move, which we call the <em>conditional trick</em>, is to stop attacking this mixture head-on and instead <em>condition on the clean image</em> <InlineMath math="\mathbf{x}_0" />. Once we do that, the problem becomes much easier: because the forward process is Markov and Gaussian, the conditional reverse kernel <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t, \mathbf{x}_0)" /> is itself just a <em>single Gaussian</em> with a closed-form mean and variance.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                A neat calculation then shows that the original "impossible" objective can be rewritten as
               </p>
 
               <div className="bg-orange-50 dark:bg-slate-800 border-2 border-orange-100 dark:border-slate-600 rounded-lg p-6 my-6 overflow-x-auto">
@@ -299,35 +351,65 @@ export default function BlogPost() {
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                In words: instead of trying to match the unknown mixture <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" /> directly, we match the <em>Gaussian conditional</em> <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t,\mathbf{x}_0)" /> for random data points <InlineMath math="\mathbf{x}_0" />. This conditional objective is mathematically equivalent to the original KL up to a constant, but now the target is <em>fully tractable</em>.
+                In words: instead of matching the unknown mixture <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" /> directly, we match the much simpler <em>Gaussian conditional</em> <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t,\mathbf{x}_0)" /> for random training examples <InlineMath math="\mathbf{x}_0" />. This new target is fully tractable, yet it is still equivalent to the original KL objective up to a constant.
+              </p>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/ddpm_conditional_trick.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="580"
+                  loading="lazy"
+                  title="DDPM Conditional Trick"
+                />
+              </div>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                This conditional trick is one of the most important recurring ideas in diffusion-type models. It will show up again in score-based SDEs and in flow matching / rectified flow: in each case, conditioning on <InlineMath math="\mathbf{x}_0" /> turns an intractable object into a regression target we can actually learn.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                This conditional trick will reappear in score-based SDEs and flow matching: in all three views, conditioning on <InlineMath math="\mathbf{x}_0" /> turns an intractable object (reverse kernel, score, or velocity) into a simple regression target we can actually learn.
-              </p>
-
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Because the forward noising rule is <em>linear and Gaussian</em>, the one-step reverse transition has a convenient form: it is also Gaussian. So DDPM models the reverse kernel as
+                Because the forward noising rule is <em>linear and Gaussian</em>, the one-step reverse transition also has a convenient Gaussian form. So DDPM models the reverse kernel as
               </p>
 
               <BlockMath math="p_\theta(\mathbf{x}_{t-1}\mid \mathbf{x}_t) := \mathcal{N}\!\big(\boldsymbol{\mu}_\theta(\mathbf{x}_t,t),\,\tilde{\sigma}_t^2\mathbf{I}\big)." />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Here <InlineMath math="\tilde{\sigma}_t^2" /> is a <em>known</em> (pre-chosen) variance schedule, so the only learnable part is the mean <InlineMath math="\boldsymbol{\mu}_\theta(\mathbf{x}_t,t)" />.
+                Here <InlineMath math="\tilde{\sigma}_t^2" /> is a known, pre-chosen variance, so the only learnable part is the mean <InlineMath math="\boldsymbol{\mu}_\theta(\mathbf{x}_t,t)" />.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                A key practical simplification is that we usually <em>do not</em> ask the network to output this mean directly. Instead, we exploit the closed-form forward relation
+                At this point, one might think the network should simply predict this mean directly. But in practice, DDPM usually takes a more clever route. The reason is closely tied to the conditional trick above. Once the clean image <InlineMath math="\mathbf{x}_0" /> is known, the correct reverse Gaussian is easy to write down. For a general linear forward rule
               </p>
 
               <BlockMath math="\mathbf{x}_t=\alpha_t\mathbf{x}_0+\sigma_t\boldsymbol{\epsilon}, \qquad \boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0},\mathbf{I})," />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                which implies that the reverse mean can be written as an <em>explicit formula</em> once we know either the clean image <InlineMath math="\mathbf{x}_0" /> or the noise <InlineMath math="\boldsymbol{\epsilon}" />. So we train the network to predict one of these simpler quantities, and then <em>plug it into</em> the analytic formula for <InlineMath math="\boldsymbol{\mu}_\theta(\mathbf{x}_t,t)" />.
+                the conditional reverse mean is an explicit analytic function of the current noisy sample <InlineMath math="\mathbf{x}_t" /> and the clean image <InlineMath math="\mathbf{x}_0" />. So the remaining question is: if we do not know <InlineMath math="\mathbf{x}_0" />, what should the network predict instead?
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                In the original DDPM formulation, the standard choice is to predict the noise. Concretely, we train <InlineMath math="\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)" /> with the regression objective
+                The forward relation above gives a very natural answer. It says that <InlineMath math="\mathbf{x}_t" /> is obtained by mixing the clean image <InlineMath math="\mathbf{x}_0" /> with Gaussian noise <InlineMath math="\boldsymbol{\epsilon}" />. So knowing <InlineMath math="\mathbf{x}_0" /> and knowing <InlineMath math="\boldsymbol{\epsilon}" /> are essentially two sides of the same coin: from one, we can recover the other.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                This is why DDPM often asks the network to predict the <em>added noise</em> rather than the reverse mean itself. If the network outputs a noise estimate <InlineMath math="\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)" />, then we can immediately turn it into an estimate of the clean image:
+              </p>
+
+              <BlockMath math="\widehat{\mathbf{x}}_0 = \frac{\mathbf{x}_t-\sigma_t\,\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)}{\alpha_t}." />
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                And once we have this estimated clean image, we simply plug it into the analytic reverse formula to obtain the Gaussian mean for the reverse step:
+              </p>
+
+              <BlockMath math="\boldsymbol{\mu}_\theta(\mathbf{x}_t,t) := \tilde{\boldsymbol{\mu}}_t\!\big(\mathbf{x}_t,\widehat{\mathbf{x}}_0\big)." />
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                So the logic is very clean: if <InlineMath math="\mathbf{x}_0" /> were known, the reverse mean would be easy to compute; predicting the noise lets us reconstruct <InlineMath math="\widehat{\mathbf{x}}_0" />; and from <InlineMath math="\widehat{\mathbf{x}}_0" /> we recover the reverse mean.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                In this sense, the network is <em>not</em> really bypassing the reverse mean. Instead, it reaches that reverse mean through an easier intermediate target, namely the added noise. In the original DDPM formulation, one therefore trains <InlineMath math="\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)" /> with the regression objective
               </p>
 
               <BlockMath math="\mathcal{L}_{\text{variational}}(\theta) = \mathbb{E}_{t,\,\mathbf{x}_0,\,\boldsymbol{\epsilon}} \Big[ \lambda(t)\, \big\| \boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)-\boldsymbol{\epsilon} \big\|_2^2 \Big]," />
@@ -337,11 +419,25 @@ export default function BlogPost() {
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Intuitively: the network sees a noisy sample <InlineMath math="\mathbf{x}_t" /> and its noise level <InlineMath math="t" />, and learns to answer "<em>What noise was added to create this sample?</em>"
+                Intuitively, the network sees a noisy sample <InlineMath math="\mathbf{x}_t" /> together with its noise level <InlineMath math="t" />, and learns to answer: "<em>What noise was added to create this sample?</em>" But the same learning problem can also be written in an equivalent clean-prediction form. From that viewpoint, the question becomes: "<em>Given this noisy observation, what is the best estimate of the clean sample from which it was constructed?</em>"
+              </p>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/ddpm_prediction_equiv.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="580"
+                  loading="lazy"
+                  title="DDPM Prediction Equivalences"
+                />
+              </div>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                At sampling time, we start from the terminal Gaussian state <InlineMath math="p_T" />, which in standard DDPM is chosen to be close to <InlineMath math="\mathcal{N}(\mathbf{0},\mathbf{I})" />. Then, at each reverse step, we predict the noise <InlineMath math="\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)" />, convert it into a clean-image estimate <InlineMath math="\widehat{\mathbf{x}}_0" />, use the closed-form reverse formula to obtain the Gaussian mean <InlineMath math="\boldsymbol{\mu}_\theta(\mathbf{x}_t,t)" />, and sample <InlineMath math="\mathbf{x}_{t-1}" />. Repeating this from <InlineMath math="t=T" /> down to <InlineMath math="t=1" /> gradually turns Gaussian noise into a clean sample <InlineMath math="\mathbf{x}_0" />.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                At sampling time, we start from <InlineMath math="\mathbf{x}_T\sim\mathcal{N}(\mathbf{0},\mathbf{I})" />. At each step, we use <InlineMath math="\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)" /> to compute the Gaussian mean <InlineMath math="\boldsymbol{\mu}_\theta(\mathbf{x}_t,t)" /> (via the closed-form reverse formula), sample <InlineMath math="\mathbf{x}_{t-1}" />, and repeat until we reach a clean sample <InlineMath math="\mathbf{x}_0" />.
+                So even though DDPM is often described as "predicting noise", the deeper story is slightly richer: the model predicts noise because noise prediction gives a simple route to the clean image, and the clean image gives a simple route to the reverse Gaussian step.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -357,34 +453,89 @@ export default function BlogPost() {
                 {" "}for how classic VAEs connect to the variational (DDPM) perspective on diffusion models.
               </p>
 
+              {/* ===== SCORE-BASED METHODS ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Score-Based Methods: Predict the Score
               </h4>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-                Score-based diffusion models keep the same forward corruption rule for <InlineMath math="\mathbf{x}_t" />, but they train the network to predict a different object: the <em>score</em> at each noise level <InlineMath math="t" />,
+                Score-based diffusion models follow the same forward corruption process for <InlineMath math="\mathbf{x}_t" />, but take a different perspective on what the network should learn. Instead of directly parameterizing a reverse transition kernel as in DDPM, they ask the model to learn the <em>score</em> of the noisy data distribution at each noise level <InlineMath math="t" />:
               </p>
 
               <BlockMath math="\nabla_{\mathbf{x}}\log p_t(\mathbf{x})," />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                where <InlineMath math="p_t" /> is the (unknown) marginal density of noisy samples at time <InlineMath math="t" />. Intuitively, the score is a local arrow that points toward <em>more likely</em> samples under <InlineMath math="p_t" />.
+                where <InlineMath math="p_t" /> is the marginal density of noisy samples at time <InlineMath math="t" />. Intuitively, the score is a local arrow field: at each point <InlineMath math="\mathbf{x}" />, it points toward directions where samples are more likely under <InlineMath math="p_t" />.
+              </p>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/score_landscape.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="580"
+                  loading="lazy"
+                  title="Score Landscape"
+                />
+              </div>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                To see why this object appears so naturally, it is helpful to start from the continuous-time view originally proposed in <em>Score-SDE</em>. Earlier, we described the forward perturbation globally through <InlineMath math="\mathbf{x}_t=\alpha_t\mathbf{x}_0+\sigma_t\boldsymbol{\epsilon}" />. This expression summarizes the <em>accumulated</em> effect of noising up to time <InlineMath math="t" />: part of the original signal is retained through <InlineMath math="\alpha_t" />, while Gaussian noise is injected with total scale <InlineMath math="\sigma_t" />.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Of course, we cannot compute <InlineMath math="\nabla_{\mathbf{x}}\log p_t(\mathbf{x})" /> directly because <InlineMath math="p_t" /> is defined by integrating over the data. The <em>conditional trick</em> is to instead use the Gaussian conditional <InlineMath math="p(\mathbf{x}_t\mid \mathbf{x}_0)" />, whose score is available in closed form:
+                The same process can also be described <em>locally in time</em>. Over an infinitesimal interval <InlineMath math="\mathrm{d}t" />, the current sample is first slightly drifted and then receives a tiny Gaussian perturbation:
+              </p>
+
+              <BlockMath math="\mathbf{x}_{t+\mathrm{d}t} \approx \mathbf{x}_t + f(t)\mathbf{x}_t\,\mathrm{d}t + g(t)\sqrt{\mathrm{d}t}\,\mathbf{z}, \qquad \mathbf{z}\sim\mathcal{N}(\mathbf{0},\mathbf{I})." />
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Here <InlineMath math="f(t)" /> and <InlineMath math="g(t)" /> describe what happens <em>moment by moment</em>: <InlineMath math="f(t)" /> controls the infinitesimal drift, while <InlineMath math="g(t)" /> controls the infinitesimal noise injection. These local coefficients are tied to the accumulated coefficients <InlineMath math="\alpha_t" /> and <InlineMath math="\sigma_t" /> through
+              </p>
+
+              <BlockMath math="f(t)=\frac{\mathrm{d}}{\mathrm{d}t}\log\alpha_t=\frac{\dot{\alpha}_t}{\alpha_t}, \qquad g^2(t)=\frac{\mathrm{d}}{\mathrm{d}t}\sigma_t^2-2f(t)\sigma_t^2." />
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                When we take the continuous-time limit, the infinitesimal update becomes the forward stochastic differential equation
+              </p>
+
+              <BlockMath math="\mathrm{d}\mathbf{x}_t = f(t)\mathbf{x}_t\,\mathrm{d}t + g(t)\,\mathrm{d}\mathbf{w}_t," />
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                where <InlineMath math="\mathbf{w}_t" /> is a Wiener process. Intuitively, over a small time step <InlineMath math="\Delta t" />, its increment is Gaussian: <InlineMath math="\mathbf{w}_{t+\Delta t}-\mathbf{w}_t \sim \mathcal{N}(\mathbf{0},\, \Delta t\,\mathbf{I})" />. So a Wiener process can be viewed as the continuous-time limit of accumulating infinitely many infinitesimal Gaussian perturbations.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                So the global perturbation formula <InlineMath math="\mathbf{x}_t=\alpha_t\mathbf{x}_0+\sigma_t\boldsymbol{\epsilon}" /> and the local SDE description are just two equivalent views of the same forward noising process: one records the total effect up to time <InlineMath math="t" />, while the other records what happens moment by moment.
+              </p>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/score_global_vs_local.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="580"
+                  loading="lazy"
+                  title="Global vs Local View"
+                />
+              </div>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Once this forward process is fixed, it anchors the whole family of noisy marginals <InlineMath math="p_t" />. A classical result of Anderson, later brought into diffusion modeling by Score-SDE, shows that there is a corresponding <em>reverse-time SDE</em> that moves from noise back to data:
+              </p>
+
+              <BlockMath math="\mathrm{d}\mathbf{x}_t = \Big[ f(t)\mathbf{x}_t - g^2(t)\,\nabla_{\mathbf{x}}\log p_t(\mathbf{x}_t) \Big]\mathrm{d}t + g(t)\,\mathrm{d}\bar{\mathbf{w}}_t." />
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                And this is exactly where the score <InlineMath math="\nabla_{\mathbf{x}}\log p_t(\mathbf{x}_t)" /> shows up! It is not inserted by hand. It appears naturally as the correction term that makes the backward dynamics follow the same family of marginals <InlineMath math="p_t" />, now traversed in reverse from noise to data.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Of course, this immediately creates a new learning problem: the true score depends on the unknown marginal density <InlineMath math="p_t" />, so we still cannot compute it directly. At this point, the same <em>conditional trick</em> we saw in DDPM shows up again, now under its classical name: <em>denoising score matching</em>. Under the Gaussian perturbation model, the conditional density <InlineMath math="p(\mathbf{x}_t\mid \mathbf{x}_0)" /> is Gaussian, so its score is available in closed form:
               </p>
 
               <BlockMath math="\nabla_{\mathbf{x}_t}\log p(\mathbf{x}_t\mid \mathbf{x}_0) = -\frac{1}{\sigma_t^2}\bigl(\mathbf{x}_t-\alpha_t\mathbf{x}_0\bigr)." />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Since <InlineMath math="\mathbf{x}_t=\alpha_t\mathbf{x}_0+\sigma_t\boldsymbol{\epsilon}" />, this target is equivalently
-              </p>
-
-              <BlockMath math="-\frac{1}{\sigma_t}\boldsymbol{\epsilon}," />
-
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                which makes the supervision feel very concrete: "given a noisy sample, point in the direction that removes the injected noise."
+                Since <InlineMath math="\mathbf{x}_t=\alpha_t\mathbf{x}_0+\sigma_t\boldsymbol{\epsilon}" />, this target is equivalently <InlineMath math="-\frac{1}{\sigma_t}\boldsymbol{\epsilon}" />, which makes the supervision feel very concrete: "given a noisy sample, point in the direction that removes the injected noise."
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -394,7 +545,7 @@ export default function BlogPost() {
               <BlockMath math="\mathcal{L}_{\text{score}}(\theta) = \mathbb{E}_{t,\,\mathbf{x}_0,\,\boldsymbol{\epsilon}} \Big[ \lambda(t)\, \big\| \mathbf{s}_\theta(\mathbf{x}_t,t) +\frac{1}{\sigma_t^2}\bigl(\mathbf{x}_t-\alpha_t\mathbf{x}_0\bigr) \big\|_2^2 \Big]." />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                More precisely, <em>denoising score matching</em> gives the same kind of "conditional trick" we saw in DDPM: the intractable regression target <InlineMath math="\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t)" /> can be replaced by the <em>tractable</em> conditional target <InlineMath math="\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t\mid \mathbf{x}_0)" />, and the two objectives differ only by a constant (so they induce the same gradient updates and the same optimum). Formally, for a constant <InlineMath math="C" /> that does <em>not</em> depend on <InlineMath math="\theta" />,
+                More precisely, <em>denoising score matching</em> says that the intractable regression target <InlineMath math="\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t)" /> can be replaced by the tractable conditional target <InlineMath math="\nabla_{\mathbf{x}_t}\log p(\mathbf{x}_t\mid \mathbf{x}_0)" />, and the two objectives differ only by a constant. Formally, for a constant <InlineMath math="C" /> independent of <InlineMath math="\theta" />,
               </p>
 
               <div className="bg-orange-50 dark:bg-slate-800 border-2 border-orange-100 dark:border-slate-600 rounded-lg p-6 my-6 overflow-x-auto">
@@ -402,47 +553,43 @@ export default function BlogPost() {
               </div>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                At test time, the learned score field <InlineMath math="\mathbf{s}_\theta" /> is turned into an actual sampler by following a continuous-time dynamics. A particularly clean option is the <em>probability-flow ODE (PF-ODE)</em>: a <em>deterministic</em> trajectory whose intermediate distributions match those of the stochastic diffusion process.
-              </p>
-
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                The PF-ODE takes the form
+                Once the score network <InlineMath math="\mathbf{s}_\theta" /> has been learned, it can be plugged back into the reverse-time dynamics for generation. One option is to sample from the <em>reverse-time SDE</em> itself. A particularly clean alternative is the <em>probability-flow ODE (PF-ODE)</em>, which gives a <em>deterministic</em> trajectory from noise to data:
               </p>
 
               <BlockMath math="\frac{\mathrm{d}\mathbf{x}(t)}{\mathrm{d}t} = f(t)\mathbf{x}(t) -\frac{1}{2}g^2(t)\mathbf{s}_\theta(\mathbf{x}(t),t)." />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Here, the coefficients <InlineMath math="f(t)" /> and <InlineMath math="g(t)" /> are tied to the forward perturbation <InlineMath math="\mathbf{x}_t=\alpha_t\mathbf{x}_0+\sigma_t\boldsymbol{\epsilon}" /> through
-              </p>
-
-              <BlockMath math="f(t)=\frac{\mathrm{d}}{\mathrm{d}t}\log\alpha_t=\frac{\dot{\alpha}_t}{\alpha_t}, \quad\text{and}\quad g^2(t)=\frac{\mathrm{d}}{\mathrm{d}t}\sigma_t^2-2f(t)\sigma_t^2." />
-
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                The key point is that the PF-ODE is constructed so that, for every time <InlineMath math="t" />, the random variable <InlineMath math="\mathbf{x}(t)" /> has distribution exactly <InlineMath math="p_t" />. So even though each trajectory is deterministic, the sampler still matches the same "distribution snapshot" at each noise level.
+                Starting from a seed drawn from the prior, <InlineMath math="\mathbf{x}_T\sim p_{\text{prior}}" />, we numerically integrate this ODE backward from <InlineMath math="t=T" /> to <InlineMath math="t=0" />. The endpoint <InlineMath math="\mathbf{x}_0" /> is then a data-like sample.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Starting from a seed drawn from the prior, <InlineMath math="\mathbf{x}_T\sim p_{\text{prior}}" />, we numerically integrate the PF-ODE backward from <InlineMath math="t=T" /> to <InlineMath math="t=0" />. The endpoint <InlineMath math="\mathbf{x}_0" /> is then a data-like sample.
+                The reverse-time SDE and the PF-ODE look very similar, and this is not an accident. Both are constructed so that, at every time <InlineMath math="t" />, their marginal distribution matches the same family <InlineMath math="p_t" />. Their difference lies in the nature of the trajectory: the reverse-time SDE remains stochastic, whereas the PF-ODE is fully deterministic. Removing the random term is exactly why the PF-ODE carries an extra factor of <InlineMath math="1/2" /> in front of the score term.
               </p>
 
-              <div className="mb-3">
-                <img
-                  src="/assets/continuous_ode.svg"
-                  alt="ODE flow visualization"
-                  className="block w-full h-auto"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
-                  }}
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                One subtle point is worth emphasizing. The reverse-time SDE should <em>not</em> be understood as simply taking a sample path from the forward SDE and playing the movie backward. For stochastic processes, time reversal is more delicate: the backward dynamics is itself a different SDE, with a score-corrected drift chosen so that the marginals evolve through the same family <InlineMath math="p_t" />, but now in reverse. The PF-ODE is different. Because it is deterministic, once its vector field is defined, we can integrate it either forward in time from data to noise or backward in time from noise to data. So the clean picture is this: the forward SDE and the reverse-time SDE are two related but different stochastic processes that share the same marginal family <InlineMath math="p_t" /> in opposite time directions, whereas the PF-ODE is a single deterministic flow that can be solved in either direction while matching those same marginal snapshots <InlineMath math="p_t" />.
+              </p>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/score_sde_three_dynamics.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="580"
+                  loading="lazy"
+                  title="Three Dynamics: Forward SDE, Reverse SDE, PF-ODE"
                 />
               </div>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                The score SDE framework can be viewed as a <em>continuous-time</em> extension of DDPM. It reframes diffusion generation as solving a time-dependent differential equation, which connects generative modeling to classical tools from differential equations.
+                This change of viewpoint is one of the most important shifts from DDPM to Score-SDE. The generation process is no longer described mainly as repeatedly applying discrete denoising steps; instead, it becomes the problem of solving a time-dependent differential equation. That opens the door to the rich literature on numerical ODE/SDE solvers, which can be used to design faster samplers. At the same time, this viewpoint makes one limitation very transparent: diffusion sampling is inherently iterative. Whether we solve the reverse-time SDE or the PF-ODE, generation proceeds through many small updates across time.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                This viewpoint also makes one practical point transparent: <em>standard diffusion sampling is inherently iterative, and can therefore be slow</em>. The sample is refined through many small updates, and high quality often requires many such steps.
+                In modern practice, people often prefer working with the PF-ODE rather than the reverse-time SDE. The main reason is that the PF-ODE is deterministic, so it avoids the extra stochastic term and is usually simpler to integrate numerically. This makes it easier to leverage classical ODE solvers, and also easier to build fast acceleration methods such as distillation and flow-map-style samplers.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                The Score-SDE framework can therefore be viewed as a <em>continuous-time</em> extension of DDPM. It keeps the same noising idea, but expresses both training and generation in the language of differential equations.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -463,16 +610,17 @@ export default function BlogPost() {
                   className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
                 >
                   Chapter 4
-                </a>                
+                </a>
                 {" "}for how classic energy-based methods connect to score-based diffusion models and the continuous-time differential-equation framework.
               </p>
 
+              {/* ===== FLOW MATCHING ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Flow Matching: Predict the Velocity
               </h4>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-                In score-based diffusion, we first learn a <em>score</em> <InlineMath math="\mathbf{s}_\theta(\mathbf{x},t)" /> (a "which way is more likely" direction), and then convert it into a sampler by integrating the PF-ODE. Flow matching shifts the focus: instead of learning the score, it trains the network to output the <em>velocity field</em> directly, the ODE rule that moves a sample at time <InlineMath math="t" />.
+                In score-based diffusion, we first learn a <em>score</em> <InlineMath math="\mathbf{s}_\theta(\mathbf{x},t)" /> (a "which way is more likely" direction), and then convert it into a sampler by integrating the PF-ODE. Flow Matching and Rectified Flow shift the focus: instead of learning the score, it trains the network to output the <em>velocity field</em> directly, the ODE rule that moves a sample at time <InlineMath math="t" />.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -510,6 +658,34 @@ export default function BlogPost() {
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Before we move on, we stress one subtle but important point. In <em>Flow Matching</em> and <em>Rectified Flow</em>, the noise scheduler choice <InlineMath math="\mathbf{x}_t = (1-t)\,\mathbf{x}_0 + t\,\boldsymbol{\epsilon}" /> means that, for a <em>fixed pair</em> <InlineMath math="(\mathbf{x}_0, \boldsymbol{\epsilon})" />, the sample travels along a perfectly straight line from data to noise. In other words, the <em>conditional path</em> is linear, and the conditional velocity is just the constant <InlineMath math="\boldsymbol{\epsilon} - \mathbf{x}_0" />, pointing from <InlineMath math="\mathbf{x}_0" /> toward <InlineMath math="\boldsymbol{\epsilon}" />.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                However, this does <em>NOT</em> mean that the marginal velocity field <InlineMath math="\mathbf{v}(\mathbf{x},t)" /> — the one the sampler actually follows — is also simple. The marginal velocity at <InlineMath math="(\mathbf{x},t)" /> is obtained by averaging the conditional velocity over <em>all</em> data–noise pairs <InlineMath math="(\mathbf{x}_0, \boldsymbol{\epsilon})" /> that could have produced <InlineMath math="\mathbf{x}" /> at time <InlineMath math="t" />:
+              </p>
+
+              <BlockMath math="\mathbf{v}(\mathbf{x},t) = \mathbb{E}\!\left[\boldsymbol{\epsilon}-\mathbf{x}_0 \;\middle|\; \mathbf{x}_t = \mathbf{x}\right]." />
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                This average is a <em>nonlinear</em> function of <InlineMath math="\mathbf{x}" /> that changes with <InlineMath math="t" />. As a result, the ODE trajectories defined by <InlineMath math="\mathbf{v}" /> can be highly curved, even though every underlying conditional path is straight.
+              </p>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/conditional_vs_marginal_paths.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="620"
+                  loading="lazy"
+                  title="Conditional vs Marginal Paths"
+                />
+              </div>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                The takeaway: <em>"linear interpolation" describes the motion of individual coupled samples, not the evolution of the full probability distribution.</em> A linear noise schedule does not straighten the ODE trajectories, so it does not, on its own, guarantee fast sampling with fewer solver steps.
+              </p>
+
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 At test time, we sample <InlineMath math="\mathbf{x}_T\sim\mathcal{N}(\mathbf{0},\mathbf{I})" /> and integrate the learned ODE
               </p>
 
@@ -517,7 +693,7 @@ export default function BlogPost() {
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 to obtain a data-like <InlineMath math="\mathbf{x}_0" />.
-              </p> 
+              </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Read more in{" "}
@@ -532,6 +708,17 @@ export default function BlogPost() {
                 {" "}for how classic normalizing flows connect to the flow-based (flow matching) perspective on diffusion models.
               </p>
 
+              <div className="mb-3">
+                <img
+                  src="/assets/continuous_ode.svg"
+                  alt="ODE flow visualization"
+                  className="block w-full h-auto"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 To actually run this on a computer, we discretize time into a grid and step <em>backward</em> from <InlineMath math="t" /> to <InlineMath math="t-\Delta t" /> along a chosen schedule. Each step replaces the continuous ODE with a small update rule, giving a practical approximation to the trajectory. Below are two standard concrete examples.
@@ -551,12 +738,17 @@ export default function BlogPost() {
                 </div>
 
                 <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
-                  This is the basic <em>first-order</em> Euler discretization of an ODE. With the learned diffusion-model
-                  velocity plugged in, this update recovers the familiar <em>DDIM-style deterministic sampler</em>: one model
-                  call per step, fast, but limited by first-order numerical accuracy.
+                  This is the basic <em>first-order</em> Euler discretization of an ODE. When the learned diffusion-model velocity is plugged in, the update recovers the familiar <em>DDIM-style deterministic sampler</em>: one model call per step, simple and fast, but still limited by first-order numerical accuracy. One subtle point is worth emphasizing. If we do not use the velocity parameterization, then DDIM is no longer exactly the classical Euler sampler; indeed, the original DDIM formulation is written in noise-prediction form as:
+                </p>
+
+                <div className="mt-3">
+                  <BlockMath math="\mathbf{x}_{t-\Delta t} = \frac{\alpha_{t-\Delta t}}{\alpha_t}\mathbf{x}_t + \alpha_{t-\Delta t} \left( \frac{\sigma_{t-\Delta t}}{\alpha_{t-\Delta t}} - \frac{\sigma_t}{\alpha_t} \right) \boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)." />
+                </div>
+
+                <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
+                  In that case, it is more accurately interpreted as an <em>exponential-Euler</em> scheme.
                 </p>
               </div>
-
 
               <div className="mt-4 mb-4 border-l-4 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 pl-4 py-3 rounded-r">
                 <h5 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
@@ -584,20 +776,26 @@ export default function BlogPost() {
                 </div>
 
                 <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
-                  This is a <em>second-order</em> method. With the diffusion-model velocity plugged in, it becomes the same
-                  predictor–corrector pattern used by <em>second-order DPM-Solver</em> variants: two model calls per step, but
-                  typically much better accuracy at the same step budget.
+                  This is a <em>second-order</em> method. With the diffusion-model velocity plugged in, it becomes the same predictor–corrector pattern used by <em>second-order DPM-Solver</em> variants: two model calls per step, but typically much better accuracy at the same step budget.
                 </p>
               </div>
-
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 In both cases, repeating the update from <InlineMath math="t=T" /> down to <InlineMath math="t=0" /> yields a data-like sample <InlineMath math="\mathbf{x}_0" />.
               </p>
 
+              <div className="my-6">
+                <iframe
+                  src="/assets/euler_vs_heun_solver.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="560"
+                  loading="lazy"
+                  title="Euler vs Heun Solver"
+                />
+              </div>
+
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Building on the key insight from Score SDE that diffusion sampling is essentially solving differential equations, sampling can be steered by taking linear combinations of vector fields (e.g., classifier
-                guidance / classifier-free guidance); see{" "}
+                Building on the key insight from Score SDE that diffusion sampling is essentially solving differential equations, sampling can be steered by taking linear combinations of vector fields (e.g., classifier guidance / classifier-free guidance); see{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=231"
                   target="_blank"
@@ -606,8 +804,7 @@ export default function BlogPost() {
                 >
                   Chapter 8
                 </a>
-                . However, solving these differential equations typically requires hundreds to thousands of steps to approximate the integral, so a large body of work adapts classical numerical ODE solvers to the PF-ODE
-                structure for fast sampling. Read more in{" "}
+                . However, solving these differential equations typically requires hundreds to thousands of steps to approximate the integral, so a large body of work adapts classical numerical ODE solvers to the PF-ODE structure for fast sampling. Read more in{" "}
                 <a
                   href="https://arxiv.org/pdf/2510.21890#page=259"
                   target="_blank"
@@ -619,8 +816,7 @@ export default function BlogPost() {
                 , where we cover a range of more sophisticated solvers.
               </p>
 
-
-
+              {/* ===== THREE LENSES ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Three Lenses on the Same Diffusion Path
               </h4>
@@ -665,6 +861,16 @@ export default function BlogPost() {
                 So, while different papers choose different training targets, they are largely <em>inter-convertible descriptions</em> of the same density evolution.
               </p>
 
+              <div className="my-6">
+                <iframe
+                  src="/assets/four_predictions.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="580"
+                  loading="lazy"
+                  title="Four Prediction Parameterizations"
+                />
+              </div>
+
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 In{" "}
                 <a
@@ -683,6 +889,7 @@ export default function BlogPost() {
               </p>
             </section>
 
+            {/* ===== SECTION II: CHANGE OF VARIABLE ===== */}
             <section>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mt-12 mb-6 border-t pt-8 border-slate-200 dark:border-slate-700">
                 II. Change-of-Variable Formulas
@@ -801,7 +1008,7 @@ export default function BlogPost() {
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                Now make those increments concrete with a nice set of illustration. A natural "tiny warp" is to move each point a small distance along a velocity field,
+                Now make those increments concrete. A natural "tiny warp" is to move each point a small distance along a velocity field,
               </p>
 
               <BlockMath math="\mathbf{x}_{t+\Delta t}=\mathbf{x}_t+\Delta t\,\mathbf{v}_t(\mathbf{x}_t)," />
@@ -880,15 +1087,17 @@ export default function BlogPost() {
                 That "more in than out" statement is exactly what the <InlineMath math="-\nabla\!\cdot \mathbf{J}_{\text{adv}}" /> term encodes.
               </p>
 
-              <div className="mb-3">
-                <img
-                  src="/assets/fokker_planck_gmm_to_equilibrium.gif"
-                  alt="Continuity equation visualization"
-                  className="block w-full h-auto"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
-                  }}
+              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                Below, we illustrate the change-of-variable story for deforming point clouds and densities between the data distribution and a Gaussian noise prior: from one large function jump, to many layered function jumps, and finally to the continuous limit described by the continuity equation:
+              </p>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/cov_2d_map.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="640"
+                  loading="lazy"
+                  title="Change-of-Variable 2D Map"
                 />
               </div>
 
@@ -928,6 +1137,16 @@ export default function BlogPost() {
                 This equation is the formal way to say: drift moves the probability cloud, and Gaussian jitters blur it.
               </p>
 
+              <div className="my-6">
+                <iframe
+                  src="/assets/fokker_planck.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="640"
+                  loading="lazy"
+                  title="Fokker-Planck Equation"
+                />
+              </div>
+
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Let us revisit how the change-of-variable story shows up inside diffusion models.
               </p>
@@ -935,6 +1154,18 @@ export default function BlogPost() {
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 In diffusion models, no matter which viewpoint we take (DDPM, Score SDE, or Flow Matching), we first choose the forward noise-injection rule ourselves. Concretely, we fix Gaussian conditionals such as <InlineMath math="p(\mathbf{x}_t\mid \mathbf{x}_0)=\mathcal{N}(\mathbf{x}_t;\alpha_t\mathbf{x}_0,\sigma_t^2\mathbf{I})" />, which tells us what a clean sample looks like after we inject noise up to time <InlineMath math="t" />. That single choice pins down a whole movie of <em>snapshot marginals</em> <InlineMath math="p_t" />, starting at the data distribution and ending near a simple noise distribution. In continuous time, the density-level bookkeeping of this movie is captured by the Fokker–Planck equation: it is the change-of-variables rule for a cloud of particles that both moves and spreads.
               </p>
+
+              <div className="mb-3">
+                <img
+                  src="/assets/fokker_planck_gmm_to_equilibrium.gif"
+                  alt="Fokker-Planck evolution visualization"
+                  className="block w-full h-auto"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect width="800" height="400" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%2364748b"%3EPlaceholder: Add your image to /public/assets/%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 The reverse-time generation step is then built to play the same movie reversely. We start from noise and update the sample step by step (by solving the PF-ODE), while remaining consistent with <em>the same</em> snapshot path <InlineMath math="p_t" /> along the way.
@@ -954,7 +1185,7 @@ export default function BlogPost() {
                 {" "}.
               </p>
 
-
+            {/* ===== SECTION III: FLOW MAPS ===== */}
             <section>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mt-12 mb-6 border-t pt-8 border-slate-200 dark:border-slate-700">
                 III. From Slow Samplers to Flow Maps
@@ -1032,6 +1263,7 @@ export default function BlogPost() {
                 Three Flow Map Families
               </h3>
 
+              {/* ===== CM ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Consistency Models (CM)
               </h4>
@@ -1078,6 +1310,7 @@ export default function BlogPost() {
                 Once we have this proxy point, CM training becomes a fully practical regression against a stop-gradient self-target, replacing the inaccessible oracle map inside the original objective.
               </p>
 
+              {/* ===== CTM ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Consistency Trajectory Models (CTM)
               </h4>
@@ -1101,19 +1334,11 @@ export default function BlogPost() {
               <BlockMath math="\mathbf{G}_\theta(\mathbf{x}_s,s,t) := \frac{t}{s}\,\mathbf{x}_s + \Bigl(1-\frac{t}{s}\Bigr)\,\mathbf{g}_\theta(\mathbf{x}_s,s,t)," />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                where <InlineMath math="\mathbf{g}_\theta" /> is aimed to approximate the residual term <InlineMath math="\mathbf{g}(\mathbf{x}_s,s,t)" />:
+                where <InlineMath math="\mathbf{g}_\theta" /> is aimed to approximate the residual term <InlineMath math="\mathbf{g}(\mathbf{x}_s,s,t)" />: <InlineMath math="\mathbf{g}_\theta \approx \mathbf{g}" />.
               </p>
 
-              <BlockMath math="\mathbf{g}_\theta \approx \mathbf{g}." />
-
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                A nice side-effect is that the boundary condition comes for free. Plugging in <InlineMath math="t=s" /> makes the mixing weight vanish, so
-              </p>
-
-              <BlockMath math="\mathbf{G}_\theta(\mathbf{x}_s,s,s)=\mathbf{x}_s," />
-
-              <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                without any special constraint during training.
+                A nice side-effect is that the boundary condition comes for free. Plugging in <InlineMath math="t=s" /> makes the mixing weight vanish, so <InlineMath math="\mathbf{G}_\theta(\mathbf{x}_s,s,s)=\mathbf{x}_s" />, without any special constraint during training.
               </p>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -1180,6 +1405,7 @@ export default function BlogPost() {
                 />
               </div>
 
+              {/* ===== MF ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
                 Mean Flow (MF)
               </h4>
@@ -1243,6 +1469,16 @@ export default function BlogPost() {
               <h3 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mt-8 mb-4">
                 How the Three Flow Map Models Relate
               </h3>
+
+              <div className="my-6">
+                <iframe
+                  src="/assets/flow_map_models.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="640"
+                  loading="lazy"
+                  title="Flow Map Models Comparison"
+                />
+              </div>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
                 CTM contains CM as a special anchored case. If CTM always fixes the terminal time to <InlineMath math="t=0" />, then it only needs to learn the maps <InlineMath math="\Psi_{s\to 0}" />, which is exactly the CM setting.
@@ -1323,7 +1559,7 @@ export default function BlogPost() {
               .
             </p>
 
-
+            {/* ===== CONCLUSION ===== */}
             <section>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mt-12 mb-6 border-t pt-8 border-slate-200 dark:border-slate-700">
                 Conclusion
@@ -1363,5 +1599,3 @@ export default function BlogPost() {
     </div>
   );
 }
-
-
