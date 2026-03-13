@@ -21,10 +21,20 @@ export default function BlogPost() {
 
         <article className="prose prose-lg prose-slate max-w-none">
           <header className="mb-12 pb-8 border-b border-slate-200 dark:border-slate-700">
-            <div className="mb-6">
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-200 dark:shadow-orange-900/30">
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+            <div className="mb-8">
+              <span
+                className="inline-flex items-center gap-3 px-6 py-3 rounded-full text-base font-bold tracking-wide shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #d4a017 0%, #f5d442 40%, #ffe066 55%, #f5d442 70%, #b8860b 100%)',
+                  color: '#4a2800',
+                  boxShadow: '0 4px 16px rgba(180, 130, 20, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.4)',
+                  border: '1px solid rgba(180, 130, 20, 0.3)',
+                  textShadow: '0 1px 0 rgba(255, 255, 255, 0.3)',
+                }}
+              >
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z" fill="currentColor" opacity="0.3" />
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z" />
                 </svg>
                 Accepted to ICLR 2026 Blogpost Track!
               </span>
