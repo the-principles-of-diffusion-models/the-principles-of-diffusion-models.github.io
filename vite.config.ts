@@ -8,3 +8,13 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
 });
+
+define: {
+  __BUILD_TIMESTAMP__: JSON.stringify(
+    new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  ),
+},
