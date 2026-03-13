@@ -80,18 +80,6 @@ export default function BlogPost() {
                 Finally, we focus on speed. Diffusion is <em>high fidelity</em> but often slow because sampling is iterative. We end with <em>flow map models</em>, which keep the same diffusion backbone but aim to learn <em>long time-jumps</em> of the probability-flow dynamics directly, replacing many tiny steps with a few big, accurate jumps.
               </p>
 
-              <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                We also provide the full PDF and supplemental code on the page:{" "}
-                <a
-                  href="https://the-principles-of-diffusion-models.github.io/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
-                >
-                  The Principles of Diffusion Models
-                </a>
-                .
-              </p>
             </section>
 
             <section>
@@ -1617,3 +1605,4 @@ export default function BlogPost() {
     </div>
   );
 }
+
