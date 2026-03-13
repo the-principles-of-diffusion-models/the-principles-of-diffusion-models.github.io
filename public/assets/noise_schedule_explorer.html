@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Noise Schedule Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Crimson Pro", Georgia, serif;
+        background: transparent;
+      }
+      .widget {
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 32px 28px 24px;
+        background: #fcfbf9;
+        border-radius: 3px;
+        border: 1px solid #e2ddd5;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      }
+      .widget-title {
+        border-bottom: 2px solid #1a1a1a;
+        padding-bottom: 6px;
+        margin-bottom: 12px;
+      }
+      .widget-title h3 {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: #1a1a1a;
+        font-family: "Crimson Pro", Georgia, serif;
+      }
+      .widget-desc {
+        font-size: 14px;
+        color: #555;
+        line-height: 1.65;
+        margin-bottom: 18px;
+      }
+      .widget-desc code {
+        font-size: 12px;
+        background: #f0ece6;
+        padding: 1px 5px;
+        border-radius: 2px;
+        font-family: "IBM Plex Mono", monospace;
+      }
+
+      .families-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .family-card {
+        padding: 8px 12px;
+        border-radius: 3px;
+        background: #fff;
+        border: 1px solid #eee;
+        transition: all 0.15s;
+      }
+      .family-card.active {
+        background: #f8f6f2;
+        border-color: #ddd8d0;
+      }
+      .family-name {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #1a1a1a;
+        font-family: "Crimson Pro", Georgia, serif;
+        margin-bottom: 1px;
+      }
+      .family-constraint {
+        font-size: 10px;
+        color: #999;
+        font-family: "IBM Plex Mono", monospace;
+        margin-bottom: 6px;
+      }
+      .family-btns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .sched-btn {
+        padding: 3px 10px;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.12s;
+        font-size: 11px;
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 400;
+        border: 1.5px solid #ccc;
+        background: #fff;
+        color: #aaa;
+      }
+      .sched-btn.on {
+        font-weight: 600;
+      }
+
+      .charts-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+      }
+      .chart-col {
+        flex: 1;
+        min-width: 260px;
+      }
+      .chart-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #333;
+        font-family: "IBM Plex Mono", monospace;
+        margin-bottom: 2px;
+      }
+
+      .slider-box {
+        background: #fff;
+        border-radius: 3px;
+        border: 1px solid #e8e4df;
+        padding: 16px 20px;
+      }
+      .slider-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .slider-t {
+        font-size: 14px;
+        font-weight: 700;
+        font-family: "IBM Plex Mono", monospace;
+        color: #1a1a1a;
+      }
+      .slider-hint {
+        font-size: 11px;
+        color: #999;
+        font-style: italic;
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: #c23616;
+        height: 4px;
+      }
+
+      .cats-row {
+        display: flex;
+        gap: 18px;
+        justify-content: center;
+        margin-top: 16px;
+        flex-wrap: wrap;
+      }
+      .cat-item {
+        text-align: center;
+      }
+      .cat-item canvas {
+        border-radius: 4px;
+        image-rendering: pixelated;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+      }
+      .cat-label {
+        font-size: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 600;
+        margin-top: 4px;
+        line-height: 1.5;
+      }
+      .cat-vals {
+        font-weight: 400;
+        color: #888;
+      }
+
+      .ve-note {
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: #f8f6f2;
+        border-radius: 3px;
+        font-size: 11px;
+        color: #6c3483;
+        font-family: "IBM Plex Mono", monospace;
+        text-align: center;
+      }
+
+      .formulas-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 6px;
+        margin-top: 12px;
+      }
+      .formula-card {
+        padding: 6px 10px;
+        border-radius: 0 3px 3px 0;
+        font-size: 10.5px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #444;
+      }
+
+      .snr-section {
+        margin-bottom: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="widget" id="widget">
+      <div class="widget-title">
+        <h3>Interactive · Noise Schedule Explorer</h3>
+      </div>
+      <p class="widget-desc">
+        All schedules define <code>xₜ = αₜ x₀ + σₜ ε</code>. They fall into
+        three families depending on how αₜ and σₜ relate. Toggle schedules
+        below, then drag the slider to noisify the cat under each
+        simultaneously.
+      </p>
+
+      <div class="families-grid" id="families"></div>
+
+      <div class="charts-row">
+        <div class="chart-col">
+          <div class="chart-label">αₜ (signal remaining)</div>
+          <div id="chart-alpha"></div>
+        </div>
+        <div class="chart-col">
+          <div class="chart-label">σₜ (noise injected)</div>
+          <div id="chart-sigma"></div>
+        </div>
+      </div>
+
+      <div class="snr-section">
+        <div class="chart-label">log₁₀ SNR = log₁₀(αₜ² / σₜ²)</div>
+        <div id="chart-snr"></div>
+      </div>
+
+      <div class="slider-box">
+        <div class="slider-header">
+          <span class="slider-t" id="t-display">t = 0.000</span>
+          <span class="slider-hint">drag to noisify →</span>
+        </div>
+        <input
+          type="range"
+          id="t-slider"
+          min="0"
+          max="1"
+          step="0.004"
+          value="0"
+        />
+        <div class="cats-row" id="cats-row"></div>
+        <div id="ve-note" class="ve-note" style="display: none"></div>
+      </div>
+
+      <div class="formulas-grid" id="formulas"></div>
+    </div>
+
+    <script>
+      // ═══════════════════════════════════════════════════════════════════
+      // DATA
+      // ═══════════════════════════════════════════════════════════════════
+      const CAT_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCADAAMADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDwzfBbyGJlM2V2tg4Cg+nvVl202xlfyEaWVOF3E4B+vrUObOWYyswhwNx2glSR29Rmr1potzr+seRolu07S/O/ZYvdz/CP19AaG7K5HLd2KWrXsskcKmALEwDqzAHf9P5YrpvDvgbV9beK51NTp1jgYXbiVx/sr/D9T+Vei+EPANhpAgu78jUNRiQKkjJiOL/cX1/2jz9K65ohgk8Y5JNcdXE30idNPD2WpzOj6Lp+k2YtNOtVgiByccs59WPUmrckccY3SHGThRjkn2Hc1pqHuDi1UFf+ezj5fwHVv5e9WINOSNi5y8h4MjEEn2HoPYVyuXc6FEwxbTTfeDQR+gI3n6n+H8OfpViGyijQIibVHYCtr7OMdKQwEdBS5h8pjG0UHOCfxpwtP9mtYQn0H1p4hPoPrS5gsZSW2B7euaSCaF22x5f2DDJ9wM5P5VZ19/sumSMB8zfKKx49H36eZipZjy57g0XKUTciiDqHU5U9CD1qVIc+tYvhnUXW9k029kzKpyrn+NfX6jofXg+tdYkB5obFYoLByflI/GpFgHOF5q+LdsZ7Co33CQxRL5kg6jsvuT2/nSuFirKEijLOwRfUiq8kclxgMHiiPPo7f/E/z+laSWbBxJKd8g6HoF+g7fzp4gOfuii4rGXFCsUKiJJ4MMHZFiDBj0wpGSOOcnrzU9lJqxuZZrWGKGzZijRyH5toP8IOccfzq8sPsKY9ohk34YN7Mf8AI/DFFy79GZ+r2rXqpFuuGhiDxxjcFdAQAehweR0JrlviHbXWk+Dr+7STzGkgFuS7ktF5hC/Kc8jBrvIolQBVHGOAK574p6fJfeAtUijUs8cazhf72xgxH5A1dOXvJGVRaOx84QWyT3gtpbnyt/3YlX+ueKlnsLSG4t/Iwfnwd7/Nn2B4qudPnijhnKTNdzP+7QKQEHZi3r9anvBp7Sh1hkmliK+a0JyGIHLY/Drmva+R5PXRna+CPhRqOrywya1I2nwtyIVH75h6nsg/M+wr1vw/4esdNsJNP0d7a1SIF1wmFkH94k859yTV25S8sdUd7YzQxhMtE48wMpPGcds/z9qm8iO7jjgmkgsrZXYtHIQrEjkqWXhQT2Hvz2rxqlWU92e1TpxivMz7K7+0QjZAzy5OEU549WJxtz6Hn61Y+zxvJGt7LG7uxCRfw5HUY/iI9/yFWpY3jtYl0y1gtZHkaaNnYkKnHJHPGT1OOlV0kNulxctZm6miO95IWVkB2jOzv93sBWd+w3G25dEA7in+SBg8VWtXudRKSLut7UgOjxMCZR9T0+mPxq/HCkS7UHGcnJySfqaliIQgApfLU5FTbD61DehktJCrFTjG7uMkDP60IZXnbauYYJJ8NsyuAM+mT+uM470ifbN6h7FCCeWS4BC+5JAA/OuVv4NQuNSR78ojaUyWsktugDKhJIOQQSAMgHA54PNdxo3hnTr+CDUBqV/e2ki7o1mJB69/y/8Ar11ujCMU2zkVacpNKJzXiDbey2FtFu2ySbmBGOBzyPwrZ0WGIWSrmP5+SDjv9c1N4sMEWv6d5YXy1t2RNvQc4rG0lLi4tBCtqzCNyC5OAOfwrnVuh3WfIrmV4w0mezmS9tCpeJt68dB6EemK6jQdQgvdKS5LqoCAsWPQHpz+n1FVvEDRxaY3nyhgg4z6+nsa47wvqjadewHyWkhMxVFK42Z5/wAeR3AotdES7npbJLMFChoYiM7sYdvp/dHuefpUsdukSBUQKB0A/wA/rWG/jfQQ/wDrZiDySIiQv1xV6LxLoEjEDVrXcB0L4/nScX2Jui4ygdv0pCh25x1NTq8cq7o3VlIyCrZBpARNcCGAGZ+mIxux7nHSpHcr7M8YqK8kt7WMyXEojA/Osjxd4stNBDW6oZLs8KgYE59wOlcna2+q+IrkXGqbijcrDvCoPr6mqUX1C9zo5fF1kWK2mZEHV0jLj8+B+RrR02/j1G3dTF5wZcARxs29TkEEckHqCP1qK00aC2twVRcd8EEfpV/4ZR+VqGoRpwoB9h94UW1G1pc8Z1D4YeMLfXmg0nTryaxjctG7sqLIp+6rEngjOCMdveoLf4M+P7fVYJU07SGjbh5IrkKI1bg5zg8ewPtX1PnnB24+tIRxmuz61PQ4/q8NTzC382ByZVeckgtKvMpx0BBOCPYflWxYvbToRDKshyS6kYYEnJyvGOfaol0xHXfYymNP+ecikp+B6gfmKpX8BhIN5bsiqflmGSq/Rhyv44rzeaS31O29zYFtGQwVdu4YYqdpI9yKsQxKiKoGAoAUDsKw9M1BoZ/LnneW3kwFkfkRt2y3cH1PQ/XjoF4HpVKVwGlRjtio2HNSHI6YqNm7UXAbjpyKbNGksTxSDKOpVh6g1IBS7QetAFGO/vLFQL+JbyJVCfasESlewcrz+YI75qT/AISCyKrFb2xmJwqpueT9DgfnVpQAOP0NQtLhikCK7Z+Y/wAK/UjqfYc/SrUyOU5bxDe3lx4rFtcFRHFaCXzAMiE5OE467gR06e9ZutXiWl3Fd2kzEy5yFbow6/nVLxrevb6xdxw3UMxmaJpZSQAuEIK46e+PesnSrrRy0k816rMoDMGPX3WtYR6st1bR5UaOoancajcrEYtrSDY4XnPcED157VDcaVc28giuWbzyxcKGHzfIw4H4D86Wy8d+Dba9TzYp8xMD5yRbhGR346D2re1SUXmow+JbJYtQ0vCtHJGcgev0xjv60Obi7WM+VSTbZgaF4Ye6lkh88QiIlZO7Z9qXxfokekNEbCeTbJkEOu4AgDv+ddt4U00WkN3f4Dz3P73HoSOB/OrN/o0c+iOt2wEwzISx4Xpn9Aaz9u+fyNPYrk21PJdMuNRhvlkEbkxktmMkbiOgx7tgc10V/wCOPFF/ZCyg1NIIEHlyypEsfmEdcY5P0H1PWql5GsHiaeysXaSLK7exHygk+o6mqd9au19LNG+y5TogGE+gHbGfzrqumctmmX/CulR3F9586STODzJN8zE+u3p/OvTdMaxtkw7+W/T51ZT9AelcX4Zn2NFcMDFzhxgfLjjpXR6nf+Zal2aORQMCVSMfQ46fjWL1ep0RWmhqX7K7KkbH94cdeo71d+H1oIrS6uiMedJgE+gyf61y9hJJHaNdzE79hS3RuCAf4iO1dJZavaWNjHbeauyFB5jE4GT7+tK13oOekbHUB9w4YHHU7eKj89B8pKAn0Nc1N4gg88xPO4KrnEfIH/16qw6/HcDfApUHnc3LGnZmNyzaODMEhl86IJlmEe1Vbjgfhmrm3j0oUAAYAA+lPyMda5jobMy40fTbjd5tnF82c7crnPrjFXI4kjQIoAVQAAeeBUh600Ak5yKYEbde2KYRjJqfAprAFgp64zilYLkS+wps0sMQJeQAg4wOWJ9MDnPtUc8xlDwWa+Y2CryZwkZ+o6n2H4kUW1qsDK5bzJFTyw/lqmFySenckkk9TTsTccBJNzJmGP8AuA/M31I6fQfnXNfEXWG0rSUs7QpHLc5UAdUQDkgfpXVc+mfxryXx+t1feMprRgzhECK6pygxnHH161pTjd6kzdkcnbxpqeoJbSySJA7YPOM+/wCddT4g8Gabpnh+G4sJJ7h7i5ghkkd+IkdgC2ABnr1PtWQ1rJo7qksMrFRhQAec8n+dWdI1u+mvBGhU2aAiWGdvlZP4lI6YNbz5nqmRGy3MbVtYNv49bw8dUk8N+EtOmjgu5bZQryEqW5ODljtPUHoc9a9D+D+D4Q1yONcWcpWaFni8vJcEbtvRSQqNjsWNYPiPS/AOsXS3tul/e6gwXFpC5McjqMKX3DBAyRk54rU0i8uNF02TTZXa4lM+91B+9Kccf7qjArN25EktRxi+e7eh2PhdWsbVLZnMpVcljnrVu5sbjWNRaEO8VumC7D+MEdB+tcdc6lrFjKWiKq7oHeNlzt9AP6/WrvjTxOF8GWlpbSeRNqzCOVo2+ZIiR5m0jvjIz25rCNOV7nRKorWRm6j4i8O6dr19c+HtH1PWrtmaJ7iBP3IbuqMeGOf7oP1rP0yfS/ENxO1vHLbaqrYkt7pSjqe+SeR+VcL4zv8AStD+IF7ca5YLqGn2cJtNJ05WAjVTCCsuMjA3N94c5Bx0Fdzp1pqd8fBtztH9uyac4vi4JJRVUo0n/AiVyfU10tcqjLucylzNrsXhDPZ74JShlH3gnPNWNFv7QylJpwko+UmQEqo+nc/oKoeINb1aOQNdaHLBbxcSENuwe54qrbwxyIup2rb4D80gGemcn37Umm1c1pSUZWexf13V3hvrq1PmIsMjRtKOWZgewrIvNcTZG0hfMIIhMnyjOPvEevocfSub8Q6v/aGqvPMSiMS45xkkklj9f5AVBC0YjLxwl/TA5/OtYQstTGpPmlc3X1tWtzCJkhQcjaSdx6nqOee5qSy12fzw6W+CBjzN+MDH8IPGfesR4WdAynbxzjBx+NVrmNmjCb0OOp61dkQfS46AYpxzg4qtBdowTzWijD4CnfwWJwF57+nrVO+vrPULdLO3nVjcbdj7iqgghhgjkngcD8cV56VzratoSXN4kd81uu+ScIGEQwA27OCSeg46/wA60Fzgbhg45ANZdvZxPdk3FsLgr+886eMF9+ex+gzxwOMVZ+0yXBK2QVl6GdvuD6f3z9OPenvsJppj7ieK3ALscscKqjLMfQDvUJhnuebomKH/AJ4K3Lf77D+Q49SamtraOBmfLSTMMPK5yze3sPYYFSse1AiPCoqoihVUYCqMAD+gpjgscZ/AVLgd/wAqS4k8mPC7VkcERKRyzduOuPU0JXB6FWdnWRII1dWcE+aUJSMf3ie/0/OvLbmRX13UtQNpNLM87LESCCVHAOPfGa7Dx7cwwWS2TXVwZ5QpmZBnPovXgZycYriPCdil3rMsdxp87R5zvuJdoI9QODXRGKSZk5NsvabHqty/k3yTRxyfPg4/AjI4pNV8OSPMpw0BOBvCbQ/pn+E/hiutYaVHPFG01idhG1Qu9l+nNW5WjjvAElQ7sEAx4GKz9o0zT2asecaT4fvRctDM09nHJ8pdgAj9wG+uOnX2rTtLXUtM8XJFq8UjK0bPa3UahoiiAABged3b/wDXXf6VZ2gm5ghD9GCoyZBOWO05U5IGPbNWvEp0q6h0/TLyWG0luLpBbor7XY9WCg9eAe3pScnIumowauclaa7pF5e3FhLcx+fDJ5TN5DfK2RnqMEe+ccVyN4pS3ukkWRo1uhPashY7MHnAPQHnoa9yuNLsUsxDBAo8sY2gdR6n1rzbxP4curyVo7QosR2k27HypI+B91jwcYJ9qdN8rsxVWp6xOT1vWbe+1dJ7nwxo7yxgGG5ZH4B54wQOfbvVqz8U64BNbWVvZWKTE4aCMb/ruZssR70sug3K3otBJKl7HCGaFlUEr9M+vcZq7Lo32KFBqUURjlP+tK7JEyAM5OBkenFbNRsYJyK1tHqWrK8U08kVsnMs0oB8w9xz0FM8GSNb3smlzk7UbKA88f8A6q6hG0AaYdNtria8mGCjKS/P1XsM/rXP39jLp3iC1LKVXADEHseKSlfQbVtThfHEVvpviW4tYkfYjb1z0GecdKqRXaSwiNlKjHJHp6U/4hyrP4vunySAe3txVKxdcjy4sgduufxP41utjLqaXmxY2quQBwMcD6VXYTs4xG+OymriDDptwgI5IXPNMmUKclmP/AsUhnv2o2w1l4I7nyYrSC4STcsmZC45HIwFHv1rReO2tHQRqd23EcMQ5I6cD09zxVSCB2INr8kchxv4w/8AugjJHuePrWhbCGJAyqVMhO53YMzMDj5jXB6nZJJP3Su1rJcHN4QE7QKfl/4Ef4vp0+tWiAq4HYYx6VBql4tpECAxlkDCLCFhuCkjOOgz3qvbS38zqty0NuURWkiCEsTj+8eAMg9M/WgkugEnj86XaoHqetISzcYIHp3qKe4jhIVgWduVjQZLf59TxSFcnXAzjAAGSx7D19qg0+JVFxeTDBmkLgkfMIwAAD+Wce9VoLefVdQCTORHbuN0SN+7zjO0/wB/GQSTwOAB1NaGrMYbG5eL5iiMVycZ49a2grGcnc8+1G8F1dXmoWmPLkm2K2R0A/OuUSK5u7SedPNY7iGXdyw9MCuj0OMPoLSsBlpWZgBjqauaboRsnkukCvHP8wcL9361XNqw5dEYWg6itlJGEt0hLYyuz7vbJJ713McEOq2omgdkI6nFUE0yKVGE0Cg8HJHUdsGrNgs2myYjBCHqhrmlJXOmMG1oZev23ipNkemSXjKeiwsoJPJ5Y9AelcH418M62dePiO5gn0e584TIfO84I2cgRem3j5Sa9ztpI7mDPRscjPQ1m6vBf3LgMN4AxgdPxrVT5VoTHexmeEPHVrqdvb6ZqNxG+o+SrNN5RjilbcRtUno3AJHTnitmVpwMFQPlPLkOmSffnp+HasTT/Blmt016bJI3J5X+En1x0zW6uiqWzIM47Bjj8ulTJp6oVktiJ7OK5uY57m2jYrH5Yl7YznAPUVXvtC895y0zSwSJtFrJwvr7g89621aGytdjOEiAwM9qxNS15LQhn2zW7D+Dof8AaB/zjv601dkux5zbpJ4c8XCBRFbrJgE7dyLnoGU8j6g10njxYjbW9ysmWjk5CHBwe4/H8KZ4pv8ATdUjhu4B5ksJAWReJYT7nOD9D17EVn3Gl3SQyajfXMkqxRkpjjbxk8dq3Su0zJ6Jo8m8U7n8QTytiRX/AIsdD1wR2NLp6lwxGxQR1Ljr9KhurpLrUbiS6jV8ucuvytx69j+P51csLItIHgaOfjIU8EfUf4Zro6GKNK2SUxITHIAB2cKv41ZjgUyCTdnB6BAe/wBKW3thHajIw5/2c456Yp8FxFC4jdR82fmZRUMo99jV50LiQEtGBuOe+T+Y9RWBc32oxX8miadbxG6D7y4P7sRnlWfPII4+XkHqKpaJ41WZCINN1K70+E7TebdxUZ4BwACR04P15qvpuvLbX2pawum3Dw3LoINzABVBILEkkqCxPQYFcihbc6XUvsdNa6ZdRX63NzdRzkbizhWVySBx97bt46Y/XmtFFVM7e5zVeC6DWEVxK6nfyAgByT0AAJyfoTTfJkuubkbYj0hDdf8AeI/kOPXNQwvoONxJcMUs8bc4aZhlQfb+8f09+1AWG05AaWaQ4Hd5D/h+g9qn6KAoAA7elRaVE1zqs1ztOI/9GQHrnOXP0+6PfFOKuS3Y0dEtmt4pGfBklcySMDgZPYfoPwqDxJA76NeKpVXaJsZHA4rb8pF8tRwF52gdT61U1FfNgZRg5GAvrWxB5v8AD+1+06RclXUtuO9Djp7etdH4chlt5ZLOQExfejbrmsTwHObHxFdaapVIGkLcnIwfT/Jr0BrbaxyMd1bFRJe9ctP3bFdbSIP5hjUn1qK4sFYH5V2n0rRCgDOA3pil2gjBQZ9c0nFMFJo54WD28u6CTaPSrUcssY3PGGHfFaj2xLfWm/ZsgAf55ojGwOVym98qICY3Ck46dKqX13cSIUgVVPZ+oxW0trtJ3AYPcio30WzlPmFWV+h2sQaJRb2HGSW5ystrdXR/fzAg46etRyGzsEYywiVM5OMcH1rornSbJJVha9kifGVVpByPxqnqugJJavsuEbA+67Da3sfT61Kg77lOaa2OWurqysYbi/Szt48Jj5ADvTORn27Y7Vxmp6vLfXYS2LrbPgGMN9xvY/yJ+hFb99pupXYawgigsolYnCuHIPfJ9D0P1qhd6BFpUG5FBBB8xT+oz7VvFxRjJSe55dJaRT3rS2wUO0hwu3Acg8gA52uP7h4P8J7VrR2Zhtw0gyzDdnZyKzLeOT+05JIIzPBKQ2Ccb1J4J9CPboa63UvKmsA5IJxjfnlscEH/AGh+tdDZkipZ3Mk8CrLC33eHbv8Aj1/OiJAl2jGXBzwrdDn61HotrsTIyWI7EY/zxVtkQSqHZVBI5xkflUMo90trGzgsEsYLWKK1QYWFFwoGc8Ae/NVYobaKOSxsYFlUk+ZvJZASSfmJ6nnoP0qeNbi8XLq9tbnovSRx7/3R7dfp0qxGixIqRoqKOAAMAVxXOgxh4bgV/tOnuYL6Pc0b5Pl7iMcxjjb7daW11KeCX7NqvlGWRj5DW0TFHA6jud3BJHHtnBrZjJRs55qK6tLe4heOSMYkO4lflbPZgRyCOxp819wtYp3N8LdXnlCrbp15+b8B9cD8RWn4STfpsdwytGZd0xTqQXYtj6c1z/iQPDYWluZWl+f5mfln2qcE/jgmus0CFIdKt44ydggUBj16VcETN3LXCruGCSMDHaoZQ3lsF4JG1M+tWFVgTlcBeKr3EpQhz1/hHp7mqIPM/C11Z2fi+9sLm4RJop2Kb2CkKTnv9eleqRTKUCn5lPQjmvmT4tm50/x+Z7BJrhlgBkCJkspPGcehzVzwz8UdT0gLbiEyIpG6CcMhHPOPwrT2bauhc62Z9GzjZz264xWVqWtWWnxebczKBnGM5P5VyHiLx7GNPgay2BrmASgvICVGcEYFeV67rlxPcOLg5LdPm+8D3+tSoNjcrHs2o/EHSLK1klSSWeQDIjjG4t9MdRXNQfGm2hn8q/0iUc53wydV9cEdfavH72G6WeKK33kMPu5yQevXAyKmi0G9mhUgNLxk46rz/jx+NaKEVuQ5Nnu9l8W/DN2HMYvFKclHi+9kZxn1p8nxNs5JjHZadcSEYILkLn1BHXOM14ra2+o6eY/ssjKSoBOOo64I9cf1Fdb4f1aCO4RdathbsjBUlK/dOBjJ9DUTjZXRcNXqek6n4gtdQhVRY7yBlS5BwfbH+fyrHSITKXdvLIAwVJH+RUN5qOlW09vm5i2zHblWyqn8Onf8jWtAts8IkUCRegYHI/H8a4Jc7d2d8eRK0Sv5USRkMxSRejN2PufSuf8AFN2DH5sgKCAETEDoPXjqP8Pet3Ury2twYbiVY5GTPzdMdj7ivO9ZvxcTrZxPmOUGNz14Hofbr74rooR1uznrSRh6bpuJJ/LcGMvvgZG4564PoePxFRXzkko+HR2+YAcH39j71poBZp9mLMZIuDnjB7mqc6LLMXJ4JB4/UfSuu5yFuC0ENtEVOCRkN61LaxE3IVnJ3DIw2M/0qtez7LPbkYI4HTP0I710HgXwzqGvxC4tV8m3Q/NPcE4Dd1UL94+vQD60nsNHsSj3ppAzSktsO0DdjgHgVieFb/Ur62uf7TiijkiuHjTy8sCMnA3YCsRwMr+PORXHY6bmdb3upS+NRpst3Jst4zNIkERCEZIUOW6AgqflzzjkCuoc8Yrln0m1t/FrmCcwS3X70lYm3ZDKxG4nBztIzyfmYYwBXTu3JPTNORKOf8W5NzZbQCCkqn8hXY6IyHS7UJ90RJz68VyGvMX1K0iPRopefT7tdD4auc+HI2kIXywY+OMbeP6VcBSL2qajDZxb5nwCQFUDJYnoAO9eQ+PtV+IOpO72OlXtlpwUgCMjzXA6liOR9BXpsFkt7frqV0N5A226H+AHqfqfX0roY4wsYXAxjHStE7MzaufIkeq3NuzECQTRsQzOxMgJ65J5/Ou58N/YtV0A3Vwgm83908ciglGxnOffnB6/lXo/xC+Guj+IxJfQAWWohGxIi/LIcDAYfh+teW+HPDeo6Zp2p213I1q7TKQG5wVBzj15x+dXKSaFFNMztQ8PLIqxwXjIUOFZ/myM9KzL7wzq8ioIbqG4KdFJ2kfQ1Dd3t9HdOMthWOAQSP8APvSWd5fKWCM+ScszNyT68datXJ0FtdSisCtpqcM8UqsVLEEj8K6jSS8tsZNNus7kBwGyT+HIqGxurLVbYWWtQ74v4ZIz80Z6ZqKx0C70HVY7iNlMRBdCpyJU7kD+Y9e1S2UjotSuntYYJpLVJ4c/OP4h6fT6/h3q60+m6jG6TIogkjG2Qr0PPX0IPf3rK129SZIZEG+AnbKO6nHX6EfyqKG8SylFu/8AqZlyjEcNkYrNxui07M6FfDuj26Stc7myFJkJwTg4zmra3FpoFmIYboOQVdsjkqeKwrO+S8STT7idgWUomTkAnp/hVCewliDR3DBdhAAJ5xjgj2qeS+7K57bINc1Oe8mSJXJKOWSUdhg9PqD0qilrMhVEQSsxBUDJL57Dj8qtW1ugYlDhl/MHsa7/AOElhBdTXerTopeBxDCuPukruZsevIH51pokZO7M7TfhxqmpOt3qFxHpysoBQr5kp+oyFH61evPhJbPEfI1+5WTGBvt0K/oQf1ruNZv721ytlapKypvbe2MjJHyjuePUdRUWha2mpQuJFSOVFVxgna6NnawzyOhBHYij3rXQrxvY+dviBoOs+HNQ+y6ljy2AMc8efKlXPHJ6HjoeR716Z8D/ABLcahpsWgiwTyLG3YvdI5OWLZAIxgE5PfnFei3NzplzutZ/InDcNE6q2fqppIBptjakWsVvbQr8xSKMIB74AFDk2rNCVr7mPrthcajaNaw6hJZo6Mr+XGCzZGBznIHqByemRXE/C+SS9F7BHfXEX2eZJlddoEiNuG0oRgD5OcY5J+p6vxBfz2s1tHFceQkisWcKCRgr0z9TWBaztarPNClrBLICJPLhjAl74Yhc927965VOyaO6OHlK0kV7+9kn8YR6xZWQuRF5UMBOMShxKFIGMjJU/PkYHrmu13u0al1COVBIByAe4z3qpd2nmNbLFOYYLeVJBEsYx8ucAH+EUT3LNIYLYLJKvDMfux/X39hz9Kpu5irop6pg63ZE54ikxx3yvNS6Tck6ZNbHKAXQXHorAGsXW5Es9TtvKaS6u2V/NGeSOME9lHXAH/16pprDWwlZl3GRtzYfaM+3BJP1qoilqeqWHzOPQCrcs8Uf+slRP95gK8ysfGEU0nkt9siZxydoKnjkZB4qa5nmuVX7NcNMNuAjsTj0GeaXO10GoX6nSa/4lt4N1vbkNLggsTwvvmvMtUvfPuWSW4ZmxzIr5BOe/p1rO1fUr6DWZIL67DmPCeXG2UU/41Z2RXOJg65A3EgdUHUfiMj8K0UerIv0RS1C0tXXbMu0jh2I3dO+c9K5LUIIRdPHbN8y9VVf1HfFekWVnGQjQu8kbISpPUNnGR9fTvXB+JbNrbUY7mHzfnGcE5wO/wBRWkJakyRf8IacXuk37A+cbWP3s8iux10JLpAtLmIbAcehU+oI61geG42n2QJbvM8oHlLHyxz02n+h9+mM16p4f8Fx7UuNeK3c3BFvnMS+m7++3149j1qZu7uNOyPOfDuh6lqJKWFpLdQFcbwMRg57ucD8s10J+GWq3cHl3WpWFun8KLG8hX8cgflXox1KzttO+1PmG2VzHEFQktg4G1V55wcD0rnr/VJb2+mlXUZbXSo408t4v3Zkc5yCSMnHHA7nvVRUpPQznNROQ1b4aa/BD51jeWd7Kg4XBiLD05yPzNcfNq13Zytp2s2zJcrlVEi7XQj+Fv059+9ey+HdfEEbWWqPePcqzvFvgO94QflJwOTj0qr4l0bwz4q1u2guooLsSWrPJNE+148YMZDjoSC3B6jtxTs07MSkmro8QfXY1X7QmGdgQEGcr25/EfrTNI8W+INAuZjpV8IBJ94FVdSOo68cZ6//AKq9P1P4KaXMXex1m7gLnI82JZMevIxmm6T8I7HSJGu77VLe6VfmU3ERVE98BgCfqce1NSiN3Lfh3WNQ/wCEOsLrV52i1S6mMke9vmFsT8zvn+HqRnuVxWl4Z0mS71GbzGmhsoraKNYgSskinLDcRyAepHBxjpkipLS20yO6SWISajcMf3U042ozDui9wP7xzjsaht9Hvdf1K+Z9Vu7bS1kEUnkNte7lQYds/wAKg/KBz92qvZW2Md5X3OtOl6X5QhGn2m0dhCox/Ws29hNi6q8hNq4wksjZ2HP3WPpjoT9D2qmnhHwxbrtjW4SYciZbuTzAfXIP9KsWt9JpMi2eqXyXNtKcW11JhS3+w/bd6HjcPcGoS7Ftp6MyvESzyGAxW0kyhWB2KGKnjHH51lT2t08EyrazRqw6sgUDgc5PAA5yTXSTTJDGC2SScKoGWY+gFVZmURm41B0jiXkRk/Kp7E/3j7dPr1ri5bnpxruKskPZ5Lv/AFZaKA/8tOjv/u+g9+p7etZd7qQjQ2umLtMT4LhVMYHfvyf19azr/wAQx387Q29xH5CZZxuKl1Hqw6fQc/SuR1LU7YvK8hZEiOxEiwoJ9AB/nrmtYwbOZysbt7ewK7q0ky3JOd0jZyffH3RjtXLanK8YZ1udyLnLK+dxJ5AAqg3iOJVKrCtxI/BUtkMegzRb3E11bCaSIINwXIGOv+fwrdQsZOVyxp9088yxszsx+bGdqqP611WgXd4byFUlPkg/Oh5yM4/nisZ9OAkhnsJcZx97sT/TIqzo12+nTqLkOVUhgD1bBPBPoSSSfapkroqLsy94m0K2m3SQyJ9qlcJsHduvH6Vl6S7W87+cd8QxDwcjPIqeGU3kjNdSMpcEq68hX3Zz/jWhJdCW3VHtgj9JV8sFX464/CkrpWB6u4aVe+TaoFZWCyAYA6cYz7Z/rVLxhFDMI5bZVzA+8gjuSScfmalQQgloofKym1hkkE+vP5/hWJe3Txu0Lsysp+6xwMjjNNLW4N6Gl4d8QX+gPK1jbWnmMQI5JVLmNSBlQOByep9AK9o03ULnXPC1rqen7YZriJZFSTIG7oVyORyDg/Q14v4c8O6v4luEWzt3jtjgSXTqRGg9Qf4m9AM+9e5RrZaHosUKlYbW0hCLk9FAwPxpvdW3Ito7nJXMrjQpGa4l+zJKkkEAiHmJL5o+TcOTyWGPwziqH2qW1e3N1ZTnyHe4aJCrFRIxCMOcfKSVx2zkUA3Gq3Zt7a1ubsidp5reIiJImZiQJJT0IB+6Ocnmt210PUYo7gSadYCOcAGBLtm2gDGBuTHOc4ziuhtR3ORRlJaFmzNlYvfWOoSG0lvJGK3DHYJFIwFDngMo4x+I6mrFtpRtxC8d1BcxwIUihKrHEFK7c/JnLY4yc8Z6VztiLTSdUknngZ7J4vIvIpNztAwOVZkJJxzjjtgjIrpbfR9CvIxcWltZSxtyHiRGB/EVjNcrvc3hLmWxlX6WsDljcS2hP8MeoLz+AOf0qrDZTXUyta2LSMP+Xi9Znx7gNjP5fjXWW2mWltzFbpGP9lAv8qhvda0mwPlvco0p6Qw/vJGP+6OfzoVST0WoezS1ehl3dumh6ZPqEjfaNQcCOJn6vI3CKPQZ5wOwrN/tKWHTI9L0G1k1Ga3Aicx/6sN/Ezv0znJwDnmk8RzTXELX2pL9ncxumn2RcbgWBBlf0wCfYDvmp9Ltru70+GSOWPS9LRAICYxudccMFOFUHsTknrVpWV2Q9XZEcFjrbDfcDUM9xFc26gfRcf1psqXZL2xZL3Iy9pewBJGA7jAww9wCPpWgllbucQeIZ2f6ROPyC/1qvfLd20J+3BLyzU7vOhyDEf7xXqv+8p4oUmJwRjDU0aFZbUXD+YgLXc1rIFA9ANv6cAd8muK8XeIgs8kcbPM8ZKGZjnB77ew/AV7aNa0xWKHUIgRwTk4H49KxfFfg3RPEUf2jyo4bogFZ4gMP6bgOGHv1rnilF3aOvmbWh87x3M13L5YJHU8dhV1NKVwN7naPvcdfauwuPCF3pl3c281oELgNCyEEOAOccVYPh2WK2EsrqidDuOMccHJ71q5olROM0HQJ7mUyRIpZj+7C/dXB561u2elssiRtE5CEIfUMecH3611ejabbWlqFR4hMJNy4yA/rjPcgkcegq5Hps32+aUwENLgllHHcZ/kfxrOVR3KUCDS9DSLT4/PJG7h4yuQuR+fXHPbNZmvwWluRbxr9suCx8pRwVyRnPtnjpkk4GTXW6ha3f9nyT4ZnjTcY1H3iOo47YznHYcVHZDRrCK1NhN9svRcrI9zJE4juJArDyw+PlKgkqOcY9c0qacncKklFDPDXw+V4FuPEVzJJIwyLO2YxRRj0JHzMfxxW9P4P8IwQEy6TawIvWTcykH/eznNUJr3UptSEM16whmjeVoIyAEw4CqGwGxg8+pFJIJ/MtLQ3jCESSyIuPnHyklQx56E49Bn0FaunLuYe1jsA0LSPOPlW9hrELAusMmFuAAedrjAfHocH3p9i3hy3Cz2/hiIY+7IiQuR/30wYHjoQDTbHz7e6jlmgMkcdw0+5ZdzklCgChsYAGM5JJqdDH5tzdNpVk5uJfMxMwzGNoHJ2kZOMnB70OPcObTRl7+35JVxaaZLxwDLKiqP++SxrOure/wBXvEhnnw4+bKLhLdf7wB6v2BOfXtTJNQkuCYrI2+4HBNuhKp9ZGyPwUE06+vmsbSKzsIsyzHCAkgyN/E7HkhR379BVJW+FESd/iZr/AGnSdBsY7WExwxR/Kqhu5689Sx6nqTUD6xdyDMNlc7ex8sLn/vsg/pXPWTLHceYkkEk5yrXty+0HHVY1HO0e2B6kmrd7c+Tfw2VzaWt4JdrCJGbfICSNyknGQR0PbnNTypFXkyl4nktdSnjNzLcaXqUSZhuGhKnbnkEjKumeozx7Vz02mX1s/wBs/swSI4w11p7M8cnuQjAqa7nRdMui0NxdTNujRgsQbIQNxyx5Y4wD24zWg+jWwle5tZpbSY9JIeN/1Xof51ca/Lp0Jlh3LXqecQ3mmbv9Ig8490m1GVR+KsK0LXXWjTytJt7K0z/z5QGaQ/8AAiMD8q7N7XVzyJ7ScDo00OD+maalhdyLm6vYo1AzsgTH6n/CqdeD3RCw8+jOPTTr6+uSJY5N8gyyztveT0Mv91Af4c89K6q10CzjRJr1Tez4z5tyd5Y+wPCj2AGK0rS2t4bcpEGUk545LH1J7mrKmRWBZMsOOR0rCpVc2dNOkoIfYaHpk1hI0ggEm3GBGB5ffPSsHUra5s2Mumytcon34s8/8AJ/keD7Vug+WQy7iW4cDuP/ANdRyLvZ3yVJ42+oqOe2xbgnuf/Z";
+
+      const families = [
+        {
+          name: "Variance Preserving (VP)",
+          constraint: "αₜ² + σₜ² = 1",
+          schedules: {
+            "DDPM (Linear β(t))": {
+              alpha: (t) => {
+                const i = 0.5 * 19.9 * t * t + 0.1 * t;
+                return Math.exp(-i / 2);
+              },
+              sigma: (t) => {
+                const i = 0.5 * 19.9 * t * t + 0.1 * t;
+                return Math.sqrt(1 - Math.exp(-i));
+              },
+              color: "#1e3a5f",
+              formula: "β(t) = 0.1 + 19.9t, α = e^{−½∫β}",
+            },
+            Cosine: {
+              alpha: (t) => Math.cos(t * Math.PI * 0.5),
+              sigma: (t) => Math.sin(t * Math.PI * 0.5),
+              color: "#2d6a4f",
+              formula: "αₜ = cos(πt/2), σₜ = sin(πt/2)",
+            },
+          },
+        },
+        {
+          name: "Variance Exploding (VE)",
+          constraint: "αₜ = 1, σₜ ∈ [0, 50]",
+          schedules: {
+            EDM: {
+              alpha: (_) => 1.0,
+              sigma: (t) => t * 50,
+              color: "#6c3483",
+              formula: "αₜ = 1, σₜ = t, t ∈ [0, 50]",
+            },
+          },
+        },
+        {
+          name: "Linear Interpolation",
+          constraint: "αₜ = 1−t, σₜ = t",
+          schedules: {
+            "FM / Rectified Flow": {
+              alpha: (t) => 1 - t,
+              sigma: (t) => t,
+              color: "#c23616",
+              formula: "αₜ = 1 − t,  σₜ = t",
+            },
+          },
+        },
+      ];
+
+      // flatten
+      const allSch = {};
+      const allNames = [];
+      families.forEach((f) =>
+        Object.entries(f.schedules).forEach(([k, v]) => {
+          allSch[k] = v;
+          allNames.push(k);
+        }),
+      );
+
+      // ═══════════════════════════════════════════════════════════════════
+      // STATE
+      // ═══════════════════════════════════════════════════════════════════
+      let selected = new Set([
+        "DDPM (Linear β(t))",
+        "Cosine",
+        "EDM",
+        "FM / Rectified Flow",
+      ]);
+      let time = 0;
+
+      // ═══════════════════════════════════════════════════════════════════
+      // PRE-COMPUTE CURVES (250 pts)
+      // ═══════════════════════════════════════════════════════════════════
+      const N = 250;
+      const curves = {}; // curves[name] = {alpha:[], sigma:[], snr:[]}
+      allNames.forEach((name) => {
+        const s = allSch[name];
+        const alpha = [],
+          sigma = [],
+          snr = [];
+        for (let i = 0; i <= N; i++) {
+          const t = i / N;
+          const a = s.alpha(t),
+            sg = s.sigma(t);
+          alpha.push(a);
+          sigma.push(sg);
+          snr.push(sg > 1e-8 ? Math.log10((a * a) / (sg * sg)) : 6);
+        }
+        curves[name] = { alpha, sigma, snr };
+      });
+
+      // ═══════════════════════════════════════════════════════════════════
+      // SVG CHART
+      // ═══════════════════════════════════════════════════════════════════
+      function makeSVG(containerId, key, yDomain, yLabel, height) {
+        const W = 320,
+          H = height || 150;
+        const p = { l: 42, r: 12, t: 12, b: 24 };
+        const iW = W - p.l - p.r,
+          iH = H - p.t - p.b;
+        const [yMin, yMax] = yDomain;
+        const toX = (t) => p.l + t * iW;
+        const toY = (v) =>
+          p.t +
+          iH -
+          ((Math.max(yMin, Math.min(yMax, v)) - yMin) / (yMax - yMin)) * iH;
+
+        const ns = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+        svg.style.width = "100%";
+        svg.style.maxWidth = W + "px";
+
+        // grid
+        [0, 0.25, 0.5, 0.75, 1].forEach((t) => {
+          const l = document.createElementNS(ns, "line");
+          l.setAttribute("x1", toX(t));
+          l.setAttribute("x2", toX(t));
+          l.setAttribute("y1", p.t);
+          l.setAttribute("y2", H - p.b);
+          l.setAttribute("stroke", "#e8e4df");
+          l.setAttribute("stroke-width", "0.5");
+          svg.appendChild(l);
+        });
+        for (let i = 0; i < 5; i++) {
+          const v = yMin + (i * (yMax - yMin)) / 4;
+          const l = document.createElementNS(ns, "line");
+          l.setAttribute("x1", p.l);
+          l.setAttribute("x2", W - p.r);
+          l.setAttribute("y1", toY(v));
+          l.setAttribute("y2", toY(v));
+          l.setAttribute("stroke", "#e8e4df");
+          l.setAttribute("stroke-width", "0.5");
+          svg.appendChild(l);
+        }
+        // axis labels
+        const mkText = (x, y, txt, rot) => {
+          const t = document.createElementNS(ns, "text");
+          t.setAttribute("x", x);
+          t.setAttribute("y", y);
+          t.setAttribute("text-anchor", "middle");
+          t.setAttribute("font-size", "9");
+          t.setAttribute("fill", "#888");
+          t.setAttribute("font-family", "'IBM Plex Mono',monospace");
+          if (rot) t.setAttribute("transform", rot);
+          t.textContent = txt;
+          return t;
+        };
+        svg.appendChild(mkText(W / 2, H - 2, "t"));
+        svg.appendChild(
+          mkText(6, p.t + iH / 2, yLabel, `rotate(-90,6,${p.t + iH / 2})`),
+        );
+        [0, 0.5, 1].forEach((t) => {
+          svg.appendChild(mkText(toX(t), H - p.b + 12, t.toString()));
+        });
+
+        // polylines (one per schedule, updated later)
+        const lines = {};
+        allNames.forEach((name) => {
+          const pl = document.createElementNS(ns, "polyline");
+          pl.setAttribute("fill", "none");
+          pl.setAttribute("stroke-width", "2");
+          pl.setAttribute("stroke-linecap", "round");
+          pl.style.display = "none";
+          svg.appendChild(pl);
+          lines[name] = pl;
+        });
+
+        // time marker
+        const tLine = document.createElementNS(ns, "line");
+        tLine.setAttribute("y1", p.t);
+        tLine.setAttribute("y2", H - p.b);
+        tLine.setAttribute("stroke", "#333");
+        tLine.setAttribute("stroke-width", "1.5");
+        tLine.setAttribute("stroke-dasharray", "4,3");
+        svg.appendChild(tLine);
+
+        document.getElementById(containerId).innerHTML = "";
+        document.getElementById(containerId).appendChild(svg);
+
+        // update fn
+        return function update(sel, t) {
+          const isVE = sel.has("EDM");
+          const yd = key === "sigma" && isVE ? [0, 55] : yDomain;
+          const [ym, yx] = yd;
+          const ty = (v) =>
+            p.t + iH - ((Math.max(ym, Math.min(yx, v)) - ym) / (yx - ym)) * iH;
+
+          allNames.forEach((name) => {
+            const pl = lines[name];
+            if (!sel.has(name)) {
+              pl.style.display = "none";
+              return;
+            }
+            pl.style.display = "";
+            const s = allSch[name];
+            pl.setAttribute("stroke", s.color);
+            pl.setAttribute("stroke-dasharray", name === "EDM" ? "6,3" : "");
+            const pts = curves[name][key]
+              .map((v, i) => `${toX(i / N)},${ty(v)}`)
+              .join(" ");
+            pl.setAttribute("points", pts);
+          });
+          tLine.setAttribute("x1", toX(t));
+          tLine.setAttribute("x2", toX(t));
+        };
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // CAT NOISIFICATION
+      // ═══════════════════════════════════════════════════════════════════
+      const catImg = new Image();
+      let catLoaded = false;
+      catImg.onload = () => {
+        catLoaded = true;
+        renderCats();
+      };
+      catImg.src = CAT_SRC;
+
+      // per-schedule noise (shared seed per schedule for consistency)
+      const noises = {};
+      function getNoise(name) {
+        if (!noises[name]) {
+          const n = new Float32Array(96 * 96 * 3);
+          // Use name as seed-ish via simple hash
+          let seed = 0;
+          for (let i = 0; i < name.length; i++)
+            seed = (seed << 5) - seed + name.charCodeAt(i);
+          // Simple LCG + Box-Muller
+          let s = Math.abs(seed) || 42;
+          const rand = () => {
+            s = (s * 1664525 + 1013904223) & 0xffffffff;
+            return (s >>> 0) / 0xffffffff;
+          };
+          for (let i = 0; i < n.length; i++) {
+            const u1 = rand() + 1e-10,
+              u2 = rand();
+            n[i] = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+          }
+          noises[name] = n;
+        }
+        return noises[name];
+      }
+
+      function renderCats() {
+        const row = document.getElementById("cats-row");
+        row.innerHTML = "";
+        const veNote = document.getElementById("ve-note");
+        const showVE = selected.has("EDM");
+        const toShow = [...selected].filter((n) => n !== "EDM");
+
+        toShow.forEach((name) => {
+          const s = allSch[name];
+          if (!s) return;
+          const div = document.createElement("div");
+          div.className = "cat-item";
+
+          const canvas = document.createElement("canvas");
+          canvas.width = 96;
+          canvas.height = 96;
+          canvas.style.width = "144px";
+          canvas.style.height = "144px";
+
+          if (catLoaded) {
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(catImg, 0, 0, 96, 96);
+            const imgData = ctx.getImageData(0, 0, 96, 96);
+            const px = imgData.data;
+            const noise = getNoise(name);
+            const a = s.alpha(time),
+              sig = s.sigma(time);
+            for (let i = 0; i < 96 * 96; i++) {
+              for (let c = 0; c < 3; c++) {
+                const x0 = px[i * 4 + c] / 255;
+                const xt = a * x0 + sig * noise[i * 3 + c] * 0.35;
+                px[i * 4 + c] = Math.max(
+                  0,
+                  Math.min(255, Math.round(xt * 255)),
+                );
+              }
+            }
+            ctx.putImageData(imgData, 0, 0);
+          }
+
+          div.appendChild(canvas);
+
+          const label = document.createElement("div");
+          label.className = "cat-label";
+          label.style.color = s.color;
+          label.innerHTML = `${name}<br><span class="cat-vals">α=${s.alpha(time).toFixed(3)}  σ=${s.sigma(time).toFixed(3)}</span>`;
+          div.appendChild(label);
+
+          row.appendChild(div);
+        });
+
+        if (showVE) {
+          veNote.style.display = "";
+          veNote.textContent = `EDM (VE): α=1, σ=${allSch["EDM"].sigma(time).toFixed(1)} — pixel demo omitted since σ reaches 50`;
+        } else {
+          veNote.style.display = "none";
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // FORMULAS
+      // ═══════════════════════════════════════════════════════════════════
+      function renderFormulas() {
+        const el = document.getElementById("formulas");
+        el.innerHTML = "";
+        [...selected].forEach((name) => {
+          const s = allSch[name];
+          if (!s) return;
+          const d = document.createElement("div");
+          d.className = "formula-card";
+          d.style.background = s.color + "06";
+          d.style.borderLeft = `2.5px solid ${s.color}`;
+          d.innerHTML = `<strong>${name}:</strong> ${s.formula}`;
+          el.appendChild(d);
+        });
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // FAMILY CARDS
+      // ═══════════════════════════════════════════════════════════════════
+      function renderFamilies() {
+        const el = document.getElementById("families");
+        el.innerHTML = "";
+        families.forEach((fam) => {
+          const card = document.createElement("div");
+          card.className = "family-card";
+          const schNames = Object.keys(fam.schedules);
+          const anyOn = schNames.some((n) => selected.has(n));
+          if (anyOn) card.classList.add("active");
+
+          card.innerHTML = `<div class="family-name">${fam.name}</div>
+      <div class="family-constraint">${fam.constraint}</div>
+      <div class="family-btns"></div>`;
+          const btns = card.querySelector(".family-btns");
+
+          schNames.forEach((name) => {
+            const s = fam.schedules[name];
+            const btn = document.createElement("button");
+            btn.className = "sched-btn";
+            btn.textContent = name;
+            const on = selected.has(name);
+            if (on) {
+              btn.classList.add("on");
+              btn.style.borderColor = s.color;
+              btn.style.background = s.color + "0d";
+              btn.style.color = s.color;
+            }
+            btn.onclick = () => {
+              if (selected.has(name)) selected.delete(name);
+              else selected.add(name);
+              fullUpdate();
+            };
+            btns.appendChild(btn);
+          });
+
+          el.appendChild(card);
+        });
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // INIT & UPDATE LOOP
+      // ═══════════════════════════════════════════════════════════════════
+      const updateAlpha = makeSVG("chart-alpha", "alpha", [0, 1.05], "αₜ", 150);
+      const updateSigma = makeSVG("chart-sigma", "sigma", [0, 1.05], "σₜ", 150);
+      const updateSNR = makeSVG("chart-snr", "snr", [-6, 6], "log₁₀ SNR", 110);
+
+      function fullUpdate() {
+        updateAlpha(selected, time);
+        updateSigma(selected, time);
+        updateSNR(selected, time);
+        renderFamilies();
+        renderCats();
+        renderFormulas();
+        document.getElementById("t-display").textContent =
+          `t = ${time.toFixed(3)}`;
+      }
+
+      document.getElementById("t-slider").addEventListener("input", (e) => {
+        time = parseFloat(e.target.value);
+        fullUpdate();
+      });
+
+      fullUpdate();
+    </script>
+  </body>
+</html>

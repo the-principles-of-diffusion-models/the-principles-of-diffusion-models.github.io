@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predicting ε ⟺ Predicting x₀</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:780px;margin:0 auto;padding:24px 22px 18px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+h3{font-size:18px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:5px;margin-bottom:8px}
+.desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
+.desc code{font-size:11px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+canvas{display:block;margin:0 auto;border:1px solid #e2ddd5;border-radius:3px;cursor:grab}
+canvas:active{cursor:grabbing}
+.ctrl-row{display:flex;gap:14px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.slider-group{flex:1;min-width:140px}
+.slider-label{font-size:10.5px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+input[type=range]{width:100%;height:5px}
+.note{margin-top:10px;padding:8px 12px;background:#f8f6f2;border-radius:3px;font-size:11.5px;
+  font-family:'IBM Plex Mono',monospace;color:#555;line-height:1.6;border-left:2.5px solid #1e3a5f}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive · Predicting &#x3B5; &#x27FA; Predicting x&#x2080;</h3>
+<p class="desc">
+  <code>x&#x209C; = &#x3B1;&#x209C; x&#x2080; + &#x3C3;&#x209C; &#x3B5;</code> is a <strong>vector sum</strong> in 2D.
+  The <span style="color:#1e3a5f"><strong>blue arrow</strong></span> is the signal component (toward x&#x0302;&#x2080;),
+  the <span style="color:#c23616"><strong>red arrow</strong></span> is the noise component (toward &#x3B5;&#x0302;).
+  Predicting one determines the other &mdash; they sit on opposite ends of the same decomposition through x&#x209C;.
+  <strong>Drag x&#x209C;</strong> to see how the decomposition changes near different data modes.
+</p>
+
+<div class="ctrl-row">
+  <div class="slider-group">
+    <div class="slider-label">noise level t = <span id="t-val">0.40</span></div>
+    <input type="range" id="t-slider" min="0.08" max="0.92" step="0.01" value="0.40" style="accent-color:#1e3a5f">
+  </div>
+</div>
+
+<canvas id="cv2" width="680" height="420"></canvas>
+<div class="note" id="note2"></div>
+</div>
+
+<script>
+var DPR=window.devicePixelRatio||1;
+var T=0.40;
+var modes=[{x:-2.2,y:1.5,col:'#8e44ad'},{x:2.0,y:0.8,col:'#1e3a5f'},{x:0,y:-2.0,col:'#c97a2e'}];
+var modeW=[0.35,0.35,0.30];
+var xt2={x:0.8,y:0.5};
+var lo=-4.5,hi=4.5;
+
+function postWeights(xtx,xty,t){
+  var sig=Math.max(t,0.01),al=1-t,s2=sig*sig;
+  var lws=modes.map(function(m,i){var dx=xtx-al*m.x,dy=xty-al*m.y;return Math.log(modeW[i])-0.5*(dx*dx+dy*dy)/s2;});
+  var mx=Math.max.apply(null,lws);var ws=lws.map(function(lw){return Math.exp(lw-mx);});
+  var S=ws.reduce(function(a,b){return a+b;},0);
+  return ws.map(function(w){return w/S;});
+}
+
+function drawArrow(ctx,x1,y1,x2,y2,col,w){
+  var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<4)return;
+  // White outline for contrast
+  ctx.strokeStyle='#fff';ctx.lineWidth=w+3;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // Colored line
+  ctx.strokeStyle=col;ctx.lineWidth=w;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // Arrowhead — big, filled, with white outline
+  var ang=Math.atan2(dy,dx),hl=Math.min(16,len*0.25);
+  var ax1=x2-hl*Math.cos(ang-0.4),ay1=y2-hl*Math.sin(ang-0.4);
+  var ax2=x2-hl*Math.cos(ang+0.4),ay2=y2-hl*Math.sin(ang+0.4);
+  var axm=x2-hl*0.35*Math.cos(ang),aym=y2-hl*0.35*Math.sin(ang);
+  // White outline
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(ax1,ay1);ctx.lineTo(axm,aym);ctx.lineTo(ax2,ay2);ctx.closePath();ctx.stroke();
+  // Fill
+  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(ax1,ay1);ctx.lineTo(axm,aym);ctx.lineTo(ax2,ay2);ctx.closePath();ctx.fill();
+}
+
+function drawLabel(ctx,text,x,y,col){
+  // Measure text, draw background pad, then text
+  ctx.font="bold 10px 'IBM Plex Mono',monospace";
+  var m=ctx.measureText(text);
+  var pw=m.width+6,ph=14;
+  ctx.fillStyle='rgba(252,251,249,0.85)';
+  ctx.fillRect(x-pw/2,y-ph/2,pw,ph);
+  ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(text,x,y);
+  ctx.textBaseline='alphabetic'; // reset
+}
+
+function draw2(){
+  var cv=document.getElementById('cv2');
+  var W=680,H=420;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';
+  var ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
+  ctx.fillStyle='#fcfbf9';ctx.fillRect(0,0,W,H);
+
+  var pad={l:10,r:10,t:10,b:40},iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+  var toX=function(v){return pad.l+((v-lo)/(hi-lo))*iW;};
+  var toY=function(v){return pad.t+iH-((v-lo)/(hi-lo))*iH;};
+  var sig=Math.max(T,0.01),al=1-T;
+
+  // Grid
+  ctx.strokeStyle='#eae6e0';ctx.lineWidth=0.5;
+  for(var v=Math.ceil(lo);v<=hi;v++){
+    ctx.beginPath();ctx.moveTo(toX(v),pad.t);ctx.lineTo(toX(v),pad.t+iH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pad.l,toY(v));ctx.lineTo(pad.l+iW,toY(v));ctx.stroke();
+  }
+
+  // Compute predictions
+  var pw=postWeights(xt2.x,xt2.y,T);
+  var x0x=0,x0y=0;
+  for(var k=0;k<modes.length;k++){x0x+=pw[k]*modes[k].x;x0y+=pw[k]*modes[k].y;}
+  var epsx=(xt2.x-al*x0x)/sig,epsy=(xt2.y-al*x0y)/sig;
+
+  var xtPx=toX(xt2.x),xtPy=toY(xt2.y);
+  var x0Px=toX(x0x),x0Py=toY(x0y);
+  var epPx=toX(epsx),epPy=toY(epsy);
+  var scPx=toX(al*x0x),scPy=toY(al*x0y);
+  var orgPx=toX(0),orgPy=toY(0);
+
+  // Data modes faintly
+  modes.forEach(function(m,i){
+    var px=toX(m.x),py=toY(m.y);
+    ctx.strokeStyle=m.col+'66';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(px-5,py-5);ctx.lineTo(px+5,py+5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px+5,py-5);ctx.lineTo(px-5,py+5);ctx.stroke();
+    ctx.fillStyle=m.col+'66';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+    ctx.fillText('mode '+(i+1),px,py+14);
+  });
+
+  // Dashed result vector (origin → xₜ)
+  ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(orgPx,orgPy);ctx.lineTo(xtPx,xtPy);ctx.stroke();
+  ctx.strokeStyle='#999';ctx.lineWidth=2;ctx.setLineDash([6,5]);
+  ctx.beginPath();ctx.moveTo(orgPx,orgPy);ctx.lineTo(xtPx,xtPy);ctx.stroke();ctx.setLineDash([]);
+
+  // Signal vector (origin → αₜ·x̂₀) — BLUE
+  drawArrow(ctx,orgPx,orgPy,scPx,scPy,'#1e3a5f',3.5);
+
+  // Noise vector (αₜ·x̂₀ → xₜ) — RED
+  drawArrow(ctx,scPx,scPy,xtPx,xtPy,'#c23616',3.5);
+
+  // Arrow labels with background pads (placed offset from the arrow midpoints)
+  var sigMx=(orgPx+scPx)/2, sigMy=(orgPy+scPy)/2;
+  var sigAng=Math.atan2(scPy-orgPy,scPx-orgPx);
+  var sigPerp=sigAng+Math.PI/2;
+  drawLabel(ctx,'\u03B1\u209C\u00B7x\u0302\u2080 (signal)',sigMx+22*Math.cos(sigPerp),sigMy+22*Math.sin(sigPerp),'#1e3a5f');
+
+  var noiMx=(scPx+xtPx)/2, noiMy=(scPy+xtPy)/2;
+  var noiAng=Math.atan2(xtPy-scPy,xtPx-scPx);
+  var noiPerp=noiAng+Math.PI/2;
+  drawLabel(ctx,'\u03C3\u209C\u00B7\u03B5\u0302 (noise)',noiMx+22*Math.cos(noiPerp),noiMy+22*Math.sin(noiPerp),'#c23616');
+
+  // Linking dashed line x̂₀ ↔ ε̂
+  ctx.strokeStyle='#8e44ad44';ctx.lineWidth=1.5;ctx.setLineDash([3,4]);
+  ctx.beginPath();ctx.moveTo(x0Px,x0Py);ctx.lineTo(epPx,epPy);ctx.stroke();ctx.setLineDash([]);
+
+  // x̂₀ dot + label
+  ctx.fillStyle='#1e3a5f';ctx.strokeStyle='#fff';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.arc(x0Px,x0Py,8,0,2*Math.PI);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x0Px,x0Py,3,0,2*Math.PI);ctx.fill();
+  drawLabel(ctx,'x\u0302\u2080 = (x\u209C \u2212 \u03C3\u209C\u03B5\u0302)/\u03B1\u209C',x0Px,x0Py-16,'#1e3a5f');
+  ctx.fillStyle='#1e3a5f88';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+  ctx.fillText('('+x0x.toFixed(2)+', '+x0y.toFixed(2)+')',x0Px,x0Py+18);
+
+  // ε̂ dot + label
+  ctx.fillStyle='#c23616';ctx.strokeStyle='#fff';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.arc(epPx,epPy,8,0,2*Math.PI);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(epPx,epPy,3,0,2*Math.PI);ctx.fill();
+  drawLabel(ctx,'\u03B5\u0302 = (x\u209C \u2212 \u03B1\u209Cx\u0302\u2080)/\u03C3\u209C',epPx,epPy-16,'#c23616');
+  ctx.fillStyle='#c2361688';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+  ctx.fillText('('+epsx.toFixed(2)+', '+epsy.toFixed(2)+')',epPx,epPy+18);
+
+  // xₜ dot
+  ctx.fillStyle='#fff';ctx.strokeStyle='#333';ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(xtPx,xtPy,11,0,2*Math.PI);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#333';ctx.beginPath();ctx.arc(xtPx,xtPy,5,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle='#333';ctx.font="bold 12px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+  ctx.fillText('x\u209C (drag me)',xtPx,xtPy-16);
+
+  // Origin
+  ctx.fillStyle='#bbb';ctx.beginPath();ctx.arc(orgPx,orgPy,3,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle='#bbb';ctx.font="8px 'IBM Plex Mono',monospace";ctx.textAlign='left';ctx.fillText('origin',orgPx+6,orgPy+4);
+
+  // Equation at bottom
+  ctx.fillStyle='#555';ctx.font="12px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+  ctx.fillText('x\u209C  =  \u03B1\u209C \u00B7 x\u0302\u2080  +  \u03C3\u209C \u00B7 \u03B5\u0302',W/2,H-22);
+  ctx.fillStyle='#888';ctx.font="10px 'IBM Plex Mono',monospace";
+  ctx.fillText('('+xt2.x.toFixed(2)+','+xt2.y.toFixed(2)+')  =  '+al.toFixed(2)+'\u00B7('+x0x.toFixed(2)+','+x0y.toFixed(2)+')  +  '+sig.toFixed(2)+'\u00B7('+epsx.toFixed(2)+','+epsy.toFixed(2)+')',W/2,H-8);
+
+  document.getElementById('note2').innerHTML='The forward rule is a <strong>vector sum</strong>: <span style="color:#1e3a5f"><strong>blue arrow</strong></span> (\u03B1\u209C\u00B7x\u0302\u2080, the signal pointing toward the clean data) + <span style="color:#c23616"><strong>red arrow</strong></span> (\u03C3\u209C\u00B7\u03B5\u0302, the noise that was added) = x\u209C. Predicting <span style="color:#c23616"><strong>\u03B5\u0302</strong></span> uniquely determines <span style="color:#1e3a5f"><strong>x\u0302\u2080</strong></span> and vice versa &mdash; they are two ends of the same decomposition. The purple dashed line shows they are always linked through x\u209C. Drag x\u209C near a data mode to see x\u0302\u2080 snap toward it.';
+}
+
+document.getElementById('t-slider').oninput=function(e){
+  T=parseFloat(e.target.value);document.getElementById('t-val').textContent=T.toFixed(2);draw2();
+};
+
+// Drag xt
+var d2=false,cv2=document.getElementById('cv2');
+function mv2(e){var r=cv2.getBoundingClientRect(),sx=680/r.width,sy=420/r.height;
+  xt2.x=lo+((e.clientX-r.left)*sx-10)/660*(hi-lo);
+  xt2.y=lo+(1-((e.clientY-r.top)*sy-10)/380)*(hi-lo);
+  xt2.x=Math.max(lo+.5,Math.min(hi-.5,xt2.x));xt2.y=Math.max(lo+.5,Math.min(hi-.5,xt2.y));draw2();}
+cv2.addEventListener('mousedown',function(e){d2=true;mv2(e);});
+cv2.addEventListener('mousemove',function(e){if(d2)mv2(e);});
+cv2.addEventListener('mouseup',function(){d2=false;});
+cv2.addEventListener('mouseleave',function(){d2=false;});
+cv2.addEventListener('touchstart',function(e){d2=true;mv2(e.touches[0]);e.preventDefault();});
+cv2.addEventListener('touchmove',function(e){if(d2)mv2(e.touches[0]);e.preventDefault();});
+cv2.addEventListener('touchend',function(){d2=false;});
+
+draw2();
+</script>
+</body></html>

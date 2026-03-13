@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Four Prediction Targets</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:740px;margin:0 auto;padding:24px 22px 18px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.w>h3{font-size:18px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:5px;margin-bottom:8px}
+.desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
+.desc code{font-size:11px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+.top-controls{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end}
+.slider-group{flex:1;min-width:140px}
+.slider-label{font-size:10.5px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+input[type=range]{width:100%;accent-color:#555;height:4px}
+.sched-group{min-width:200px}
+.sched-btns{display:flex;gap:4px;flex-wrap:wrap}
+.sched-btn{padding:4px 10px;border-radius:2px;border:1.5px solid #ddd;background:#fff;font-size:10.5px;
+  font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .12s;color:#888}
+.sched-btn:hover{border-color:#999}
+.sched-btn.on{border-color:#333;color:#1a1a1a;font-weight:700;background:#f5f3ef}
+.canvas-wrap{text-align:center;margin-bottom:14px;position:relative}
+.canvas-wrap canvas{border:1px solid #e2ddd5;border-radius:3px;cursor:crosshair}
+.hover-info{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(252,251,249,.93);
+  border:1px solid #ddd;border-radius:3px;padding:4px 10px;font-size:9.5px;font-family:'IBM Plex Mono',monospace;
+  color:#555;white-space:nowrap;pointer-events:none;display:none;max-width:95%;overflow:hidden}
+.section-label{font-size:10px;font-family:'IBM Plex Mono',monospace;color:#999;margin-bottom:6px;
+  text-transform:uppercase;letter-spacing:.5px}
+.targets-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media(max-width:550px){.targets-grid{grid-template-columns:1fr}}
+.target-btn{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:3px;
+  border:1.5px solid #ddd;background:#fff;cursor:pointer;transition:all .15s;text-align:left}
+.target-btn:hover{border-color:#bbb;background:#fafaf8}
+.target-btn.on{border-width:2px}
+.target-swatch{width:14px;height:14px;border-radius:2px;flex-shrink:0;margin-top:2px}
+.target-info{flex:1;min-width:0}
+.target-name{font-size:12px;font-weight:700;font-family:'Crimson Pro',Georgia,serif;margin-bottom:1px}
+.target-q{font-size:10.5px;color:#666;font-family:'IBM Plex Mono',monospace;line-height:1.4}
+.target-formula{font-size:9.5px;color:#aaa;font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.target-dir{font-size:9px;font-family:'IBM Plex Mono',monospace;margin-top:3px;padding:2px 5px;
+  border-radius:2px;display:inline-block}
+.note{font-size:11.5px;color:#555;line-height:1.6;padding:8px 12px;background:#f8f6f2;
+  border-radius:3px;margin-top:10px;border-left:2.5px solid #666;font-family:'IBM Plex Mono',monospace}
+.note strong{color:#333}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive · Four Equivalent Prediction Targets</h3>
+<p class="desc">
+  Data = 3 clusters (×); forward rule <code>xₜ = αₜ x₀ + σₜ ε</code>.
+  Toggle targets below to overlay arrow fields on the same density plot — <strong>click multiple to compare directions</strong>.
+  Switch the schedule to see how the geometry changes.
+</p>
+
+<div class="top-controls">
+  <div class="sched-group">
+    <div class="slider-label">schedule (αₜ, σₜ)</div>
+    <div class="sched-btns" id="sched-btns"></div>
+  </div>
+  <div class="slider-group">
+    <div class="slider-label">t = <span id="t-val">0.35</span></div>
+    <input type="range" id="t-slider" min="0.03" max="0.97" step="0.01" value="0.35">
+  </div>
+  <div class="slider-group" style="max-width:100px">
+    <div class="slider-label">arrows</div>
+    <input type="range" id="density-slider" min="6" max="18" step="1" value="11">
+  </div>
+</div>
+
+<div class="canvas-wrap">
+  <canvas id="cv" width="680" height="480"></canvas>
+  <div class="hover-info" id="hover-info"></div>
+</div>
+
+<div class="section-label">prediction targets (click to toggle — overlay multiple to compare)</div>
+<div class="targets-grid" id="targets-grid"></div>
+<div class="note" id="note">Click a target above to display its arrow field.</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+const CW=680,CH=480,DPR=window.devicePixelRatio||1;
+let T=0.35,GRID=11;
+const lo=-4.8,hi=4.8;
+
+const modes=[{x:-2.2,y:1.8,w:.35},{x:2.2,y:0.8,w:.35},{x:0,y:-2.4,w:.30}];
+
+// ═══════════════════════════════════════════════════════════════
+// SCHEDULES
+// ═══════════════════════════════════════════════════════════════
+const schedules = {
+  'Linear (1−t, t)': {
+    alpha:t=>1-t, sigma:t=>t,
+    alphaDot:t=>-1, sigmaDot:t=>1,
+    label:'FM / Rectified Flow',
+  },
+  'Cosine (VP)': {
+    alpha:t=>Math.cos(t*Math.PI*.5),
+    sigma:t=>Math.sin(t*Math.PI*.5),
+    alphaDot:t=>-Math.PI/2*Math.sin(t*Math.PI*.5),
+    sigmaDot:t=>Math.PI/2*Math.cos(t*Math.PI*.5),
+    label:'Cosine schedule',
+  },
+  'VE (1, t)': {
+    alpha:t=>1, sigma:t=>t,
+    alphaDot:t=>0, sigmaDot:t=>1,
+    label:'EDM / VE',
+  },
+};
+let SCHED_KEY = 'Linear (1−t, t)';
+function S(){ return schedules[SCHED_KEY]; }
+
+// ═══════════════════════════════════════════════════════════════
+// TARGETS
+// ═══════════════════════════════════════════════════════════════
+const targetDefs = [
+  { key:'x0',    color:'#8e44ad', rgba:'142,68,173',
+    name:'x₀-prediction (clean data)',
+    q:'Given noisy xₜ, what is the most plausible original clean sample?',
+  },
+  { key:'score', color:'#1e3a5f', rgba:'30,58,95',
+    name:'Score (∇log pₜ)',
+    q:'At position xₜ, which direction increases the marginal density pₜ?',
+  },
+  { key:'eps',   color:'#c23616', rgba:'194,54,22',
+    name:'ε-prediction (noise)',
+    q:'Given noisy xₜ, what noise ε was most likely added to produce it?',
+  },
+  { key:'vel',   color:'#2d6a4f', rgba:'45,106,79',
+    name:'Velocity v(x,t)',
+    q:'What is the ODE drift that transports the density from noise toward data?',
+  },
+];
+
+let active = new Set(['x0']);
+
+// ═══════════════════════════════════════════════════════════════
+// MATH
+// ═══════════════════════════════════════════════════════════════
+function posteriorWeights(x,y,t){
+  const s=S(), al=s.alpha(t), sig=Math.max(s.sigma(t),.005);
+  const s2=sig*sig;
+  const lws=modes.map(m=>{const dx=x-al*m.x,dy=y-al*m.y;return Math.log(m.w)-.5*(dx*dx+dy*dy)/s2;});
+  const mx=Math.max(...lws);const ws=lws.map(lw=>Math.exp(lw-mx));const Z=ws.reduce((a,b)=>a+b,0);
+  return ws.map(w=>w/Z);
+}
+
+function predict(x,y,t){
+  const pw=posteriorWeights(x,y,t);
+  const s=S(), al=s.alpha(t), sig=Math.max(s.sigma(t),.005);
+  const ad=s.alphaDot(t), sd=s.sigmaDot(t);
+
+  let Ex0x=0,Ex0y=0;
+  for(let k=0;k<modes.length;k++){Ex0x+=pw[k]*modes[k].x;Ex0y+=pw[k]*modes[k].y;}
+
+  const eex=(x-al*Ex0x)/sig, eey=(y-al*Ex0y)/sig;
+
+  return {
+    x0:    [Ex0x-x, Ex0y-y],       // arrow: x̂₀ − xₜ (toward clean)
+    x0abs: [Ex0x, Ex0y],
+    eps:   [eex, eey],
+    score: [-eex/sig, -eey/sig],
+    vel:   [ad*Ex0x+sd*eex, ad*Ex0y+sd*eey],
+  };
+}
+
+function ptDensity(x,y,t){
+  const s=S(),al=s.alpha(t),sig=Math.max(s.sigma(t),.005),s2=sig*sig;let d=0;
+  for(const m of modes){const dx=x-al*m.x,dy=y-al*m.y;d+=m.w*Math.exp(-.5*(dx*dx+dy*dy)/s2)/(2*Math.PI*s2);}
+  return d;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAWING
+// ═══════════════════════════════════════════════════════════════
+const pad={l:6,r:6,t:6,b:6};
+const iW=CW-pad.l-pad.r,iH=CH-pad.t-pad.b;
+const toX=v=>pad.l+((v-lo)/(hi-lo))*iW;
+const toY=v=>pad.t+iH-((v-lo)/(hi-lo))*iH;
+const fromPx=px=>(px-pad.l)/iW*(hi-lo)+lo;
+const fromPy=py=>(1-(py-pad.t)/iH)*(hi-lo)+lo;
+const pxX=iW/(hi-lo),pxY=iH/(hi-lo);
+
+let hmCache=null;
+function computeHeatmap(){
+  const res=90;const data=new Float64Array(res*res);let maxD=0;
+  for(let py=0;py<res;py++)for(let px=0;px<res;px++){
+    const x=fromPx(pad.l+(px+.5)/res*iW),y=fromPy(pad.t+(py+.5)/res*iH);
+    const d=ptDensity(x,y,T);data[py*res+px]=d;if(d>maxD)maxD=d;
+  }
+  hmCache={data,res,maxD};
+}
+
+function drawHeatmap(ctx){
+  const{data,res,maxD}=hmCache;const cw=iW/res,ch=iH/res;
+  for(let py=0;py<res;py++)for(let px=0;px<res;px++){
+    const d=data[py*res+px]/maxD;const b=Math.pow(d,.4);
+    ctx.fillStyle=`rgb(${Math.round(252-17*b)},${Math.round(251-23*b)},${Math.round(249-34*b)})`;
+    ctx.fillRect(pad.l+px*cw,pad.t+py*ch,cw+.5,ch+.5);
+  }
+}
+
+function drawModes(ctx){
+  const s=S(),al=s.alpha(T);
+  for(const m of modes){
+    const px=toX(al*m.x),py=toY(al*m.y);
+    ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(px-5,py-5);ctx.lineTo(px+5,py+5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px+5,py-5);ctx.lineTo(px-5,py+5);ctx.stroke();
+  }
+}
+
+function drawArrow(ctx,x1,y1,x2,y2,col,w){
+  const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<2)return;
+  ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const ang=Math.atan2(dy,dx),hl=Math.min(6,len*.35);
+  ctx.fillStyle=col;ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-hl*Math.cos(ang-.4),y2-hl*Math.sin(ang-.4));
+  ctx.lineTo(x2-hl*Math.cos(ang+.4),y2-hl*Math.sin(ang+.4));
+  ctx.closePath();ctx.fill();
+}
+
+function draw(){
+  const cv=document.getElementById('cv');
+  cv.width=CW*DPR;cv.height=CH*DPR;
+  cv.style.width=CW+'px';cv.style.height=CH+'px';
+  const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
+
+  computeHeatmap();drawHeatmap(ctx);drawModes(ctx);
+
+  if(active.size===0){
+    ctx.fillStyle='rgba(0,0,0,.2)';ctx.font="15px 'Crimson Pro',Georgia,serif";
+    ctx.textAlign='center';ctx.fillText('← Select a prediction target below',CW/2,CH/2);
+    return;
+  }
+
+  const step=(hi-lo)/(GRID+1);
+  const activeList=[...active].map(key=>targetDefs.find(t=>t.key===key));
+  const nA=activeList.length;
+  const offAng=nA>1?Math.PI*2/nA:0;
+
+  activeList.forEach((tgt,tIdx)=>{
+    let maxM=0;
+    for(let i=1;i<=GRID;i++)for(let j=1;j<=GRID;j++){
+      const x=lo+i*step,y=lo+j*step;const f=predict(x,y,T)[tgt.key];
+      maxM=Math.max(maxM,Math.sqrt(f[0]*f[0]+f[1]*f[1]));
+    }
+    const as=step*.7/(maxM||1);
+    const offPx=nA>1?3:0;
+    const ox=offPx*Math.cos(offAng*tIdx),oy=offPx*Math.sin(offAng*tIdx);
+
+    for(let i=1;i<=GRID;i++)for(let j=1;j<=GRID;j++){
+      const x=lo+i*step,y=lo+j*step;const f=predict(x,y,T)[tgt.key];
+      const mag=Math.sqrt(f[0]*f[0]+f[1]*f[1]);
+      const px=toX(x)+ox,py=toY(y)+oy;
+      const dx=f[0]*as*pxX,dy=-f[1]*as*pxY;
+      const alpha=(.15+.85*Math.min(mag/(maxM||1),1)).toFixed(2);
+      drawArrow(ctx,px,py,px+dx,py+dy,`rgba(${tgt.rgba},${alpha})`,nA>1?1.4:1.8);
+    }
+  });
+
+  // Legend
+  let ly=14;
+  activeList.forEach(tgt=>{
+    ctx.fillStyle=tgt.color;
+    ctx.fillRect(pad.l+8,pad.t+ly-6,10,10);
+    ctx.font="bold 10px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+    const lab={x0:'x̂₀ − xₜ',eps:'ε̂',score:'∇log pₜ',vel:'v(x,t)'}[tgt.key];
+    ctx.fillText(lab,pad.l+22,pad.t+ly+3);
+    ly+=16;
+  });
+
+  // Schedule label
+  ctx.fillStyle='rgba(0,0,0,.25)';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='right';
+  const s=S();
+  ctx.fillText(`αₜ=${s.alpha(T).toFixed(3)}  σₜ=${s.sigma(T).toFixed(3)}`,CW-pad.r-6,CH-pad.b-6);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HOVER
+// ═══════════════════════════════════════════════════════════════
+const cv=document.getElementById('cv');
+const hEl=document.getElementById('hover-info');
+cv.addEventListener('mousemove',e=>{
+  const r=cv.getBoundingClientRect();const sx=CW/r.width,sy=CH/r.height;
+  const x=fromPx((e.clientX-r.left)*sx),y=fromPy((e.clientY-r.top)*sy);
+  if(x<lo||x>hi||y<lo||y>hi){hEl.style.display='none';return;}
+  const p=predict(x,y,T);
+  const parts=[];
+  if(active.has('x0'))   parts.push(`<span style="color:#8e44ad">x̂₀=(${p.x0abs[0].toFixed(2)},${p.x0abs[1].toFixed(2)})</span>`);
+  if(active.has('eps'))  parts.push(`<span style="color:#c23616">ε̂=(${p.eps[0].toFixed(2)},${p.eps[1].toFixed(2)})</span>`);
+  if(active.has('score'))parts.push(`<span style="color:#1e3a5f">s=(${p.score[0].toFixed(2)},${p.score[1].toFixed(2)})</span>`);
+  if(active.has('vel'))  parts.push(`<span style="color:#2d6a4f">v=(${p.vel[0].toFixed(2)},${p.vel[1].toFixed(2)})</span>`);
+  if(parts.length){hEl.innerHTML=`(${x.toFixed(1)},${y.toFixed(1)}): `+parts.join('  ');hEl.style.display='';}
+  else hEl.style.display='none';
+});
+cv.addEventListener('mouseleave',()=>{hEl.style.display='none';});
+
+// ═══════════════════════════════════════════════════════════════
+// SCHEDULE BUTTONS
+// ═══════════════════════════════════════════════════════════════
+function renderSchedBtns(){
+  const el=document.getElementById('sched-btns');el.innerHTML='';
+  Object.keys(schedules).forEach(key=>{
+    const btn=document.createElement('button');
+    btn.className='sched-btn'+(key===SCHED_KEY?' on':'');
+    btn.textContent=key;
+    btn.onclick=()=>{SCHED_KEY=key;renderSchedBtns();renderTargetBtns();draw();updateNote();};
+    el.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TARGET BUTTONS — formulas adapt to schedule
+// ═══════════════════════════════════════════════════════════════
+function getFormulas(){
+  const sk=SCHED_KEY;
+  if(sk==='Linear (1−t, t)') return {
+    x0:   'x̂₀ = E[x₀ | xₜ]',
+    eps:  'ε̂ = (xₜ − (1−t)x̂₀) / t',
+    score:'∇log pₜ = −ε̂ / t',
+    vel:  'v = (xₜ − x̂₀) / t  =  ε̂ − x̂₀',
+  };
+  if(sk==='Cosine (VP)') return {
+    x0:   'x̂₀ = E[x₀ | xₜ]',
+    eps:  'ε̂ = (xₜ − cos(πt/2)·x̂₀) / sin(πt/2)',
+    score:'∇log pₜ = −ε̂ / sin(πt/2)',
+    vel:  'v = −(π/2)sin(πt/2)·x̂₀ + (π/2)cos(πt/2)·ε̂',
+  };
+  // VE
+  return {
+    x0:   'x̂₀ = E[x₀ | xₜ]',
+    eps:  'ε̂ = (xₜ − x̂₀) / t',
+    score:'∇log pₜ = −ε̂ / t',
+    vel:  'v = ε̂   (since α̇ₜ = 0)',
+  };
+}
+
+function getDirInfo(){
+  const sk=SCHED_KEY;
+  if(sk==='Linear (1−t, t)') return {
+    x0:   {label:'→ toward data modes',          bg:'#8e44ad12',col:'#8e44ad'},
+    score:{label:'→ toward density peaks (∝ x̂₀ dir)', bg:'#1e3a5f12',col:'#1e3a5f'},
+    eps:  {label:'← away from modes (has offset from x̂₀)', bg:'#c2361612',col:'#c23616'},
+    vel:  {label:'← exactly opposite to x̂₀ (= −(x̂₀−xₜ)/t)', bg:'#2d6a4f12',col:'#2d6a4f'},
+  };
+  if(sk==='Cosine (VP)') return {
+    x0:   {label:'→ toward data modes',      bg:'#8e44ad12',col:'#8e44ad'},
+    score:{label:'→ toward density peaks',    bg:'#1e3a5f12',col:'#1e3a5f'},
+    eps:  {label:'← away from modes',         bg:'#c2361612',col:'#c23616'},
+    vel:  {label:'↻ mixes x̂₀ and ε̂ — distinct direction!', bg:'#2d6a4f12',col:'#2d6a4f'},
+  };
+  return {
+    x0:   {label:'→ toward data modes',      bg:'#8e44ad12',col:'#8e44ad'},
+    score:{label:'→ toward density peaks',    bg:'#1e3a5f12',col:'#1e3a5f'},
+    eps:  {label:'← away from modes',         bg:'#c2361612',col:'#c23616'},
+    vel:  {label:'= ε̂ exactly (α̇ₜ = 0)',     bg:'#2d6a4f12',col:'#2d6a4f'},
+  };
+}
+
+function renderTargetBtns(){
+  const grid=document.getElementById('targets-grid');grid.innerHTML='';
+  const formulas=getFormulas(), dirs=getDirInfo();
+  targetDefs.forEach(tgt=>{
+    const on=active.has(tgt.key);
+    const btn=document.createElement('div');
+    btn.className='target-btn'+(on?' on':'');
+    if(on){btn.style.borderColor=tgt.color;btn.style.background=tgt.color+'08';}
+    const di=dirs[tgt.key];
+    btn.innerHTML=`
+      <div class="target-swatch" style="background:${tgt.color}"></div>
+      <div class="target-info">
+        <div class="target-name" style="color:${on?tgt.color:'#333'}">${tgt.name}</div>
+        <div class="target-q">${tgt.q}</div>
+        <div class="target-formula">${formulas[tgt.key]}</div>
+        <div class="target-dir" style="color:${di.col};background:${di.bg}">${di.label}</div>
+      </div>`;
+    btn.onclick=()=>{
+      if(active.has(tgt.key))active.delete(tgt.key);else active.add(tgt.key);
+      renderTargetBtns();draw();updateNote();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPARISON NOTE — adapts to schedule + selection
+// ═══════════════════════════════════════════════════════════════
+function updateNote(){
+  const el=document.getElementById('note');
+  const a=[...active];
+  const sk=SCHED_KEY;
+
+  if(a.length===0){el.innerHTML='Click any target above to see its arrow field.';return;}
+
+  if(a.length===1){
+    const t=targetDefs.find(t=>t.key===a[0]);
+    el.innerHTML=`Showing <strong style="color:${t.color}">${t.name}</strong>. Enable another to overlay and compare arrow directions.`;
+    return;
+  }
+
+  const has=k=>a.includes(k);
+  let msg='';
+
+  if(has('x0')&&has('eps')){
+    msg+='<strong style="color:#8e44ad">x̂₀</strong> and <strong style="color:#c23616">ε̂</strong> arrows point in roughly <em>opposite</em> directions — x̂₀ denoises toward clean data, ε̂ identifies the noise that was added. ';
+  }
+  if(has('x0')&&has('score')){
+    msg+='<strong style="color:#8e44ad">x̂₀</strong> and <strong style="color:#1e3a5f">score</strong> both point toward data modes, but score is rescaled by 1/σₜ (larger arrows at low noise). ';
+  }
+  if(has('x0')&&has('vel')){
+    if(sk==='Linear (1−t, t)'){
+      msg+='With the linear schedule, <strong style="color:#2d6a4f">velocity</strong> is always exactly anti-parallel to <strong style="color:#8e44ad">x̂₀</strong> (since v = −(x̂₀−xₜ)/t). <em>Try Cosine (VP) to see them diverge!</em> ';
+    } else if(sk==='Cosine (VP)'){
+      msg+='With the cosine schedule, <strong style="color:#2d6a4f">velocity</strong> mixes x̂₀ and ε̂ with time-varying weights (π/2·sin and π/2·cos), so it points in a <em>genuinely different direction</em> from both. ';
+    } else {
+      msg+='With VE, <strong style="color:#2d6a4f">velocity</strong> = ε̂ exactly (since α̇=0), so it points <em>away</em> from modes — opposite to <strong style="color:#8e44ad">x̂₀</strong>. ';
+    }
+  }
+  if(has('eps')&&has('vel')&&!has('x0')){
+    if(sk==='VE (1, t)'){
+      msg+='With VE, <strong style="color:#2d6a4f">velocity</strong> and <strong style="color:#c23616">ε̂</strong> are <em>identical</em> (v = α̇·x̂₀ + σ̇·ε̂ = ε̂ since α̇=0). ';
+    } else if(sk==='Cosine (VP)'){
+      msg+='<strong style="color:#2d6a4f">Velocity</strong> blends ε̂ and x̂₀ with time-dependent weights — not parallel to either. ';
+    }
+  }
+  if(has('score')&&has('eps')){
+    msg+='<strong style="color:#1e3a5f">Score</strong> = −<strong style="color:#c23616">ε̂</strong>/σₜ — opposite direction, rescaled by noise level. ';
+  }
+
+  if(!msg) msg='All four encode the same information — knowing any one determines the other three via the (αₜ,σₜ) schedule.';
+  el.innerHTML=msg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WIRING
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('t-slider').addEventListener('input',e=>{
+  T=parseFloat(e.target.value);document.getElementById('t-val').textContent=T.toFixed(2);draw();
+});
+document.getElementById('density-slider').addEventListener('input',e=>{GRID=parseInt(e.target.value);draw();});
+
+renderSchedBtns();renderTargetBtns();draw();updateNote();
+</script>
+</body>
+</html>

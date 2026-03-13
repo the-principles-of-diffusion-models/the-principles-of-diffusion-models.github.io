@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ODE vs SDE: Continuity vs Fokker-Planck</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:780px;margin:0 auto;padding:24px 22px 18px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+h3{font-size:18px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:5px;margin-bottom:8px}
+.desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:14px}
+.desc code{font-size:11px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+.panels-scroll{overflow-x:auto;padding-bottom:6px;margin:0 -4px;scrollbar-width:thin;scrollbar-color:#ccc transparent}
+.panels-scroll::-webkit-scrollbar{height:6px}
+.panels-scroll::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+.panels{display:flex;gap:10px;min-width:min-content;padding:0 4px}
+.panel{text-align:center;position:relative;flex-shrink:0}
+.panel canvas{border:1px solid #e2ddd5;border-radius:3px}
+.panel-title{font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;margin-bottom:4px}
+.panel-eq{font-size:10px;font-family:'IBM Plex Mono',monospace;color:#888;margin-bottom:2px}
+.ctrl-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.slider-group{flex:1;min-width:150px}
+.slider-label{font-size:10.5px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+input[type=range]{width:100%;height:5px}
+.btn{padding:5px 14px;border-radius:2px;border:1px solid #ddd;background:#fff;font-size:11px;
+  font-family:'IBM Plex Mono',monospace;cursor:pointer}
+.btn:hover{background:#f5f3ef}
+.btn.primary{border-color:#1e3a5f;color:#1e3a5f;font-weight:700}
+.note{margin-top:10px;padding:8px 12px;background:#f8f6f2;border-radius:3px;font-size:11.5px;
+  font-family:'IBM Plex Mono',monospace;color:#555;line-height:1.6;border-left:2.5px solid #1e3a5f}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive · ODE Transport vs SDE Diffusion</h3>
+<p class="desc">
+  Both panels transport particles from noise (t=1) toward data (t=0) using the <strong>same velocity field</strong>.
+  <strong>Left (ODE)</strong>: pure transport, no randomness — density obeys the <em>continuity equation</em>.
+  <strong>Right (SDE)</strong>: same transport <strong>plus Gaussian jitter</strong> at each step — density obeys the <em>Fokker–Planck equation</em>.
+  Watch how the noise term <strong>blurs</strong> the particle cloud. Press <strong>Play</strong>.
+</p>
+
+<div class="ctrl-row">
+  <button class="btn primary" id="btn-play">▶ Play</button>
+  <button class="btn" id="btn-step">Step →</button>
+  <button class="btn" id="btn-reset">↺ Reset</button>
+  <div class="slider-group" style="max-width:160px">
+    <div class="slider-label">noise g = <span id="g-val">0.8</span></div>
+    <input type="range" id="g-slider" min="0.1" max="2.0" step="0.05" value="0.8" style="accent-color:#1e3a5f">
+  </div>
+  <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:#888">
+    t = <span id="t-display">1.00</span>
+  </div>
+</div>
+
+<div class="panels-scroll">
+<div class="panels">
+  <div class="panel">
+    <div class="panel-title" style="color:#c23616">ODE (continuity equation)</div>
+    <div class="panel-eq">∂pₜ/∂t = −∇·(pₜ v)</div>
+    <canvas id="cv-ode" width="340" height="340"></canvas>
+  </div>
+  <div class="panel">
+    <div class="panel-title" style="color:#1e3a5f">SDE (Fokker–Planck)</div>
+    <div class="panel-eq">∂pₜ/∂t = −∇·(pₜ f) + ½g²Δpₜ</div>
+    <canvas id="cv-sde" width="340" height="340"></canvas>
+  </div>
+</div>
+</div>
+
+<div class="note">
+  Both start from <strong>identical</strong> particles. The ODE cloud stays tight — density only <em>flows</em>.
+  The SDE cloud spreads — the extra ½g²Δp term pushes mass from dense regions into sparse ones.
+  This is the difference between the <strong>continuity equation</strong> (pure transport) and the
+  <strong>Fokker–Planck equation</strong> (transport + diffusion).
+</div>
+</div>
+
+<script>
+const DPR=window.devicePixelRatio||1,SZ=340;
+const lo=-4.5,hi=4.5;
+const modes=[{x:-2.2,y:1.5,w:.35},{x:2,y:.8,w:.35},{x:0,y:-2,w:.30}];
+let G=0.8,time=1,running=false,animId=null;
+
+function vField(x,y,t){
+  if(t<.005)return[0,0];
+  const sig=t,al=1-t,s2=sig*sig;
+  const lws=modes.map(m=>{const dx=x-al*m.x,dy=y-al*m.y;return Math.log(m.w)-.5*(dx*dx+dy*dy)/s2;});
+  const mx=Math.max(...lws);const ws=lws.map(lw=>Math.exp(lw-mx));const S=ws.reduce((a,b)=>a+b,0);
+  let Ex0x=0,Ex0y=0;
+  for(let k=0;k<modes.length;k++){Ex0x+=ws[k]/S*modes[k].x;Ex0y+=ws[k]/S*modes[k].y;}
+  return [(-Ex0x+(x-al*Ex0x)/sig), (-Ex0y+(y-al*Ex0y)/sig)];
+}
+
+const toP=(v,sz)=>((v-lo)/(hi-lo))*sz;
+
+// Particles — same initial positions for both
+const NP=600;
+let odeP=[],sdeP=[];
+
+// Seeded random
+let seed=42;
+function sr(s){seed=s;}
+function rr(){seed=(seed*1664525+1013904223)&0x7FFFFFFF;return seed/0x7FFFFFFF;}
+function rg(){const u1=rr()+1e-10,u2=rr();return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);}
+
+function initP(){
+  odeP=[];sdeP=[];sr(42);
+  for(let i=0;i<NP;i++){
+    const x=rg()*1.5, y=rg()*1.5;
+    odeP.push({x,y});sdeP.push({x,y});
+  }
+  time=1;
+}
+initP();
+
+function step(){
+  const dt=0.004;
+  if(time<=.005)return;
+  for(let i=0;i<NP;i++){
+    // ODE step
+    const [vx,vy]=vField(odeP[i].x,odeP[i].y,time);
+    odeP[i].x-=dt*vx; odeP[i].y-=dt*vy;
+    // SDE step (same drift + noise)
+    const [vx2,vy2]=vField(sdeP[i].x,sdeP[i].y,time);
+    const u1=Math.random(),u2=Math.random(),u3=Math.random(),u4=Math.random();
+    const z1=Math.sqrt(-2*Math.log(u1+1e-10))*Math.cos(2*Math.PI*u2);
+    const z2=Math.sqrt(-2*Math.log(u3+1e-10))*Math.cos(2*Math.PI*u4);
+    sdeP[i].x-=dt*vx2 + G*Math.sqrt(dt)*z1;
+    sdeP[i].y-=dt*vy2 + G*Math.sqrt(dt)*z2;
+  }
+  time-=dt;
+}
+
+function setupCv(id){
+  const cv=document.getElementById(id);
+  cv.width=SZ*DPR;cv.height=SZ*DPR;cv.style.width=SZ+'px';cv.style.height=SZ+'px';
+  const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);return ctx;
+}
+
+function drawPanel(id,particles,col){
+  const ctx=setupCv(id);
+  ctx.fillStyle='#fcfbf9';ctx.fillRect(0,0,SZ,SZ);
+
+  // Grid
+  ctx.strokeStyle='#eae6e0';ctx.lineWidth=.5;
+  for(let v=Math.ceil(lo);v<=hi;v++){
+    ctx.beginPath();ctx.moveTo(toP(v,SZ),0);ctx.lineTo(toP(v,SZ),SZ);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,SZ-toP(v,SZ));ctx.lineTo(SZ,SZ-toP(v,SZ));ctx.stroke();
+  }
+
+  // Mode markers (fade in as t decreases)
+  if(time<.7){
+    ctx.globalAlpha=Math.min((0.7-time)*3,1);
+    for(const m of modes){
+      const px=toP((1-time)*m.x,SZ),py=SZ-toP((1-time)*m.y,SZ);
+      ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(px-4,py-4);ctx.lineTo(px+4,py+4);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px+4,py-4);ctx.lineTo(px-4,py+4);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // Particles
+  ctx.fillStyle=col;ctx.globalAlpha=.4;
+  for(const p of particles){
+    const px=toP(p.x,SZ),py=SZ-toP(p.y,SZ);
+    if(px<-3||px>SZ+3||py<-3||py>SZ+3)continue;
+    ctx.beginPath();ctx.arc(px,py,2.2,0,2*Math.PI);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function draw(){
+  drawPanel('cv-ode',odeP,'#c23616');
+  drawPanel('cv-sde',sdeP,'#1e3a5f');
+  document.getElementById('t-display').textContent=time.toFixed(2);
+}
+
+function animate(){
+  for(let i=0;i<4;i++)step();
+  draw();
+  if(running&&time>.01) animId=requestAnimationFrame(animate);
+  else{running=false;document.getElementById('btn-play').textContent='▶ Play';}
+}
+
+document.getElementById('btn-play').onclick=()=>{
+  if(running){running=false;cancelAnimationFrame(animId);document.getElementById('btn-play').textContent='▶ Play';}
+  else{running=true;document.getElementById('btn-play').textContent='⏸ Pause';animate();}
+};
+document.getElementById('btn-step').onclick=()=>{for(let i=0;i<4;i++)step();draw();};
+document.getElementById('btn-reset').onclick=()=>{running=false;if(animId)cancelAnimationFrame(animId);
+  document.getElementById('btn-play').textContent='▶ Play';initP();draw();};
+document.getElementById('g-slider').oninput=e=>{G=parseFloat(e.target.value);document.getElementById('g-val').textContent=G.toFixed(1);};
+
+draw();
+</script>
+</body></html>

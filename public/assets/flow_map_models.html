@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flow Map Models: CM, CTM, MF</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:780px;margin:0 auto;padding:24px 22px 18px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+h3{font-size:18px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:5px;margin-bottom:8px}
+.desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
+.desc code{font-size:11px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+canvas{display:block;margin:0 auto;border:1px solid #e2ddd5;border-radius:3px}
+.ctrl-row{display:flex;gap:14px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.slider-group{flex:1;min-width:120px}
+.slider-label{font-size:10.5px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+input[type=range]{width:100%;height:5px}
+.mode-btns{display:flex;gap:5px;flex-wrap:nowrap;margin-bottom:10px;overflow-x:auto}
+.mode-btn{padding:6px 10px;border-radius:2px;border:1.5px solid #ddd;background:#fff;font-size:10px;
+  font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .12s;line-height:1.3;flex-shrink:0}
+.mode-btn:hover{background:#fafaf8}
+.mode-btn.on{font-weight:700;border-width:2px}
+.mode-btn .sub{font-size:8px;font-weight:400;display:block;color:#999}
+.note{margin-top:10px;padding:8px 12px;background:#f8f6f2;border-radius:3px;font-size:11.5px;
+  font-family:'IBM Plex Mono',monospace;color:#555;line-height:1.6;border-left:2.5px solid #1e3a5f}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive &middot; What Flow Map Models Learn</h3>
+<p class="desc">
+  The gray curves are PF-ODE trajectories from noise (t=1) to data (t=0).
+  A <strong>flow map</strong> &#x03A8;<sub>s&#x2192;t</sub> maps a point at time s to where it lands at time t &mdash;
+  <em>without tracing the intermediate curve</em>.
+  Select a model to see what it parameterizes on the <strong>highlighted trajectory</strong>.
+</p>
+
+<div class="mode-btns">
+  <button class="mode-btn" id="btn-ode" style="border-color:#888">
+    Standard ODE<span class="sub">trace full curve (slow)</span>
+  </button>
+  <button class="mode-btn on" id="btn-cm" style="border-color:#c23616;color:#c23616">
+    CM<span class="sub">&#x03A8;<sub>s&#x2192;0</sub> &mdash; jump to t=0</span>
+  </button>
+  <button class="mode-btn" id="btn-ctm" style="border-color:#1e3a5f;color:#1e3a5f">
+    CTM<span class="sub">&#x03A8;<sub>s&#x2192;t</sub> &mdash; jump to any t</span>
+  </button>
+  <button class="mode-btn" id="btn-mf" style="border-color:#2d6a4f;color:#2d6a4f">
+    MF<span class="sub">h(x,s,t) &mdash; average slope</span>
+  </button>
+</div>
+
+<div class="ctrl-row">
+  <div class="slider-group">
+    <div class="slider-label">start s = <span id="s-val">0.85</span></div>
+    <input type="range" id="s-slider" min="0.08" max="0.97" step="0.01" value="0.85" style="accent-color:#c23616">
+  </div>
+  <div class="slider-group" id="t-group">
+    <div class="slider-label">target t = <span id="t-val">0.15</span></div>
+    <input type="range" id="t-slider" min="0.02" max="0.95" step="0.01" value="0.15" style="accent-color:#1e3a5f">
+  </div>
+  <div class="slider-group" id="u-group" style="display:none">
+    <div class="slider-label">midpoint u = <span id="u-val">0.50</span></div>
+    <input type="range" id="u-slider" min="0.03" max="0.96" step="0.01" value="0.50" style="accent-color:#8e44ad">
+  </div>
+  <div class="slider-group" id="nfe-group" style="display:none;max-width:130px">
+    <div class="slider-label">NFE = <span id="nfe-val">8</span></div>
+    <input type="range" id="nfe-slider" min="2" max="50" step="1" value="8" style="accent-color:#888">
+  </div>
+</div>
+
+<canvas id="cv" width="720" height="420"></canvas>
+<div class="note" id="note"></div>
+</div>
+
+<script>
+var DPR=window.devicePixelRatio||1, CW=720, CH=420;
+var MODE='cm', S=0.85, TGT=0.15, U=0.50, NFE=8;
+
+// 3 modes for curvy trajectories
+var dataModes=[
+  {x: 3.5, w:0.35},
+  {x:-3.5, w:0.35},
+  {x: 0.0, w:0.30}
+];
+
+// Closed-form marginal velocity for 3-mode point-mass data, linear schedule
+function vMarg(x,t){
+  if(t<1e-4)return 0;
+  var sig=t, al=1-t, s2=sig*sig;
+  var lws=dataModes.map(function(m){return Math.log(m.w)-0.5*Math.pow((x-al*m.x)/sig,2);});
+  var mx=Math.max.apply(null,lws);
+  var ws=lws.map(function(lw){return Math.exp(lw-mx);});
+  var Z=ws.reduce(function(a,b){return a+b;},0);
+  var Ex0=0;
+  for(var k=0;k<dataModes.length;k++) Ex0+=ws[k]/Z*dataModes[k].x;
+  return (x-Ex0)/t;
+}
+
+// Pre-compute ODE trajectories (t: 1→0)
+var NSTEPS=600, NT=24;
+var trajs=[];
+(function(){
+  // Seed starting points: spread them so some cross the decision boundary (max curvature)
+  var starts=[];
+  var rng={s:42,next:function(){this.s=(this.s*1664525+1013904223)&0x7FFFFFFF;return this.s/0x7FFFFFFF;},
+    gauss:function(){var u1=this.next()+1e-10,u2=this.next();return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);}};
+  for(var p=0;p<NT;p++) starts.push(rng.gauss()*1.3);
+
+  for(var p=0;p<NT;p++){
+    var x=starts[p], dt=1/NSTEPS;
+    var traj=new Array(NSTEPS+1);
+    traj[NSTEPS]={t:1,x:x};
+    for(var s2=NSTEPS;s2>0;s2--){
+      var t=Math.max(s2*dt,0.003);
+      x-=dt*vMarg(x,t);
+      traj[s2-1]={t:(s2-1)*dt,x:x};
+    }
+    trajs.push(traj);
+  }
+})();
+
+// Pick highlighted trajectory: the one with most curvature
+var HTRAJ=0;
+(function(){
+  var maxCurv=0;
+  for(var p=0;p<NT;p++){
+    // Curvature ≈ max |second derivative| along the trajectory
+    var c=0;
+    for(var s2=2;s2<NSTEPS-2;s2+=4){
+      var x0=trajs[p][s2-2].x, x1=trajs[p][s2].x, x2=trajs[p][s2+2].x;
+      var dd=Math.abs(x2-2*x1+x0);
+      if(dd>c) c=dd;
+    }
+    if(c>maxCurv){maxCurv=c;HTRAJ=p;}
+  }
+})();
+
+function trajX(idx,t){
+  var si=Math.round(t*NSTEPS);
+  return trajs[idx][Math.max(0,Math.min(NSTEPS,si))].x;
+}
+
+// Layout
+var pad={l:52,r:16,t:14,b:32};
+var iW=CW-pad.l-pad.r, iH=CH-pad.t-pad.b;
+var xLo=-5,xHi=5;
+function toCanX(t){return pad.l+(1-t)*iW;}
+function toCanY(x){return pad.t+iH/2-(x/(xHi-xLo))*iH;}
+
+function drawArrowHead(ctx,x,y,ang,size,col){
+  var hw=size*0.45;
+  var hx1=x-size*Math.cos(ang)-hw*Math.cos(ang-Math.PI/2);
+  var hy1=y-size*Math.sin(ang)-hw*Math.sin(ang-Math.PI/2);
+  var hx2=x-size*Math.cos(ang)+hw*Math.cos(ang-Math.PI/2);
+  var hy2=y-size*Math.sin(ang)+hw*Math.sin(ang-Math.PI/2);
+  ctx.fillStyle=col;ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(hx1,hy1);ctx.lineTo(hx2,hy2);ctx.closePath();
+  ctx.stroke();ctx.fill();
+}
+
+function drawThickArrow(ctx,x1,y1,x2,y2,col,w){
+  var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<3)return;
+  var ang=Math.atan2(dy,dx);
+  ctx.strokeStyle='#fff';ctx.lineWidth=w+3;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.strokeStyle=col;ctx.lineWidth=w;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  drawArrowHead(ctx,x2,y2,ang,Math.min(12,len*0.3),col);
+}
+
+function drawDashedArrow(ctx,x1,y1,x2,y2,col,w){
+  var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<3)return;
+  var ang=Math.atan2(dy,dx);
+  ctx.strokeStyle='#fff';ctx.lineWidth=w+2;ctx.lineCap='round';ctx.setLineDash([6,5]);
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.strokeStyle=col;ctx.lineWidth=w;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.setLineDash([]);
+  drawArrowHead(ctx,x2,y2,ang,Math.min(10,len*0.25),col);
+}
+
+function drawDot(ctx,cx,cy,r,col){
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx,cy,r+2,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,r,0,2*Math.PI);ctx.fill();
+}
+
+function drawLabel(ctx,text,x,y,col,align){
+  ctx.font="bold 10px 'IBM Plex Mono',monospace";
+  var m=ctx.measureText(text);var pw=m.width+6,ph=14;
+  var lx=align==='right'?x-pw:align==='center'?x-pw/2:x;
+  ctx.fillStyle='rgba(252,251,249,0.88)';ctx.fillRect(lx,y-ph/2,pw,ph);
+  ctx.fillStyle=col;ctx.textAlign=align||'left';ctx.textBaseline='middle';
+  ctx.fillText(text,align==='right'?x-3:align==='center'?x:x+3,y);
+  ctx.textBaseline='alphabetic';
+}
+
+function draw(){
+  var cv=document.getElementById('cv');
+  cv.width=CW*DPR;cv.height=CH*DPR;cv.style.width=CW+'px';cv.style.height=CH+'px';
+  var ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
+  ctx.fillStyle='#fcfbf9';ctx.fillRect(0,0,CW,CH);
+
+  if(TGT>=S)TGT=S-0.03;
+  if(MODE==='cm')TGT=0.02;
+  if(MODE==='ctm'){if(U>=S)U=S-0.02;if(U<=TGT)U=TGT+0.02;}
+
+  // Grid
+  ctx.strokeStyle='#e8e4df';ctx.lineWidth=0.5;
+  for(var t=0;t<=1;t+=0.25){
+    ctx.beginPath();ctx.moveTo(toCanX(t),pad.t);ctx.lineTo(toCanX(t),pad.t+iH);ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle='#aaa';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+  [0,0.25,0.5,0.75,1].forEach(function(t){ctx.fillText('t='+t.toFixed(2),toCanX(t),CH-pad.b+14);});
+  ctx.fillStyle='#2d6a4f';ctx.font="bold 9px 'IBM Plex Mono',monospace";
+  ctx.textAlign='right';ctx.fillText('data (t=0)',toCanX(0),CH-pad.b+14);
+  ctx.textAlign='left';ctx.fillStyle='#888';ctx.fillText('noise (t=1)',toCanX(1),CH-pad.b+14);
+
+  // Data mode markers at t≈0
+  dataModes.forEach(function(m){
+    var px=toCanX(0),py=toCanY(m.x);
+    ctx.fillStyle='#2d6a4f';ctx.beginPath();ctx.arc(px,py,4,0,2*Math.PI);ctx.fill();
+  });
+
+  // ── All ODE trajectories ──
+  for(var p=0;p<NT;p++){
+    var isH=p===HTRAJ;
+    ctx.strokeStyle=isH?'#aaa':'#e2ddd5';ctx.lineWidth=isH?2.5:1;
+    ctx.beginPath();
+    for(var s2=0;s2<=NSTEPS;s2+=2){
+      var pt2=trajs[p][s2];
+      var cx=toCanX(pt2.t),cy=toCanY(pt2.x);
+      s2?ctx.lineTo(cx,cy):ctx.moveTo(cx,cy);
+    }
+    ctx.stroke();
+  }
+
+  var xs=trajX(HTRAJ,S);
+  var xt=trajX(HTRAJ,TGT);
+  var xu=MODE==='ctm'?trajX(HTRAJ,U):0;
+  var pxS=toCanX(S),pyS=toCanY(xs);
+  var pxT=toCanX(TGT),pyT=toCanY(xt);
+  var pxU=toCanX(U),pyU=toCanY(xu);
+
+  // ── Mode-specific overlays ──
+  if(MODE==='ode'){
+    // Highlighted ODE segment with variable step count
+    ctx.strokeStyle='#555';ctx.lineWidth=4;
+    ctx.beginPath();
+    for(var s2=Math.round(TGT*NSTEPS);s2<=Math.round(S*NSTEPS);s2++){
+      var pt2=trajs[HTRAJ][s2];
+      var cx=toCanX(pt2.t),cy=toCanY(pt2.x);
+      s2===Math.round(TGT*NSTEPS)?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy);
+    }
+    ctx.stroke();
+
+    // Step markers at NFE positions
+    for(var k=0;k<=NFE;k++){
+      var tk=S-k*(S-TGT)/NFE;
+      var xk=trajX(HTRAJ,tk);
+      drawDot(ctx,toCanX(tk),toCanY(xk),3,'#333');
+    }
+    drawDot(ctx,pxS,pyS,6,'#333');
+    drawDot(ctx,pxT,pyT,6,'#333');
+    drawLabel(ctx,'x\u209B',pxS-8,pyS-14,'#333','right');
+    drawLabel(ctx,'x\u209C',pxT+8,pyT-14,'#333','left');
+    drawLabel(ctx,NFE+' NFE ('+NFE+' network calls)',toCanX((S+TGT)/2),Math.min(pyS,pyT)-24,'#888','center');
+
+  } else if(MODE==='cm'){
+    // Highlighted trajectory segment
+    ctx.strokeStyle='#c2361644';ctx.lineWidth=4;
+    ctx.beginPath();
+    for(var s2=Math.round(0.02*NSTEPS);s2<=Math.round(S*NSTEPS);s2++){
+      var pt2=trajs[HTRAJ][s2];
+      s2===Math.round(0.02*NSTEPS)?ctx.moveTo(toCanX(pt2.t),toCanY(pt2.x)):ctx.lineTo(toCanX(pt2.t),toCanY(pt2.x));
+    }
+    ctx.stroke();
+
+    var x0=trajX(HTRAJ,0.02);
+    // Main arrow s → 0
+    drawThickArrow(ctx,pxS,pyS,toCanX(0.02),toCanY(x0),'#c23616',3);
+    // Second point also maps to same x₀
+    var s2v=Math.max(S-0.30,0.10);
+    var xs2=trajX(HTRAJ,s2v);
+    drawDashedArrow(ctx,toCanX(s2v),toCanY(xs2),toCanX(0.02),toCanY(x0),'#c2361688',2);
+    drawDot(ctx,toCanX(s2v),toCanY(xs2),4,'#c2361688');
+
+    drawDot(ctx,pxS,pyS,6,'#c23616');
+    drawDot(ctx,toCanX(0.02),toCanY(x0),7,'#c23616');
+    drawLabel(ctx,'x\u209B',pxS-8,pyS-14,'#c23616','right');
+    drawLabel(ctx,'\u03A8\u209B\u21920(x\u209B) = x\u2080',toCanX(0.02)+8,toCanY(x0),'#c23616','left');
+    drawLabel(ctx,'same x\u2080!',toCanX(0.02)+8,toCanY(x0)+16,'#c2361688','left');
+
+  } else if(MODE==='ctm'){
+    // Big jump s → t
+    drawThickArrow(ctx,pxS,pyS,pxT,pyT,'#1e3a5f',3);
+    // Two smaller: s → u, u → t
+    drawDashedArrow(ctx,pxS,pyS+6,pxU,pyU+6,'#8e44ad',2);
+    drawDashedArrow(ctx,pxU,pyU+6,pxT,pyT+6,'#2d6a4f',2);
+
+    drawDot(ctx,pxS,pyS,6,'#1e3a5f');
+    drawDot(ctx,pxU,pyU,5,'#8e44ad');
+    drawDot(ctx,pxT,pyT,6,'#1e3a5f');
+    drawLabel(ctx,'x\u209B',pxS-8,pyS-14,'#1e3a5f','right');
+    drawLabel(ctx,'x\u1D64',pxU,pyU-14,'#8e44ad','center');
+    drawLabel(ctx,'x\u209C',pxT+8,pyT-14,'#1e3a5f','left');
+
+    var midPx=(pxS+pxT)/2,midPy=Math.min(pyS,pyT,pyU)-28;
+    drawLabel(ctx,'\u03A8\u209B\u2192\u209C = \u03A8\u1D64\u2192\u209C \u2218 \u03A8\u209B\u2192\u1D64',midPx,midPy,'#333','center');
+
+  } else if(MODE==='mf'){
+    // Trajectory segment highlighted
+    ctx.strokeStyle='#2d6a4f44';ctx.lineWidth=4;
+    ctx.beginPath();
+    for(var s2=Math.round(TGT*NSTEPS);s2<=Math.round(S*NSTEPS);s2++){
+      var pt2=trajs[HTRAJ][s2];
+      s2===Math.round(TGT*NSTEPS)?ctx.moveTo(toCanX(pt2.t),toCanY(pt2.x)):ctx.lineTo(toCanX(pt2.t),toCanY(pt2.x));
+    }
+    ctx.stroke();
+
+    // Chord
+    drawThickArrow(ctx,pxS,pyS,pxT,pyT,'#2d6a4f',3);
+    // Extended chord line
+    var dx=pxT-pxS,dy=pyT-pyS,dlen=Math.sqrt(dx*dx+dy*dy);
+    if(dlen>5){
+      var ext=35;
+      ctx.strokeStyle='#2d6a4f44';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(pxS-dx/dlen*ext,pyS-dy/dlen*ext);
+      ctx.lineTo(pxT+dx/dlen*ext,pyT+dy/dlen*ext);ctx.stroke();ctx.setLineDash([]);
+    }
+
+    var slope=(xt-xs)/(TGT-S);
+    drawDot(ctx,pxS,pyS,6,'#2d6a4f');
+    drawDot(ctx,pxT,pyT,6,'#2d6a4f');
+    drawLabel(ctx,'x\u209B',pxS-8,pyS-14,'#2d6a4f','right');
+    drawLabel(ctx,'x\u209C',pxT+8,pyT-14,'#2d6a4f','left');
+
+    var midPx=(pxS+pxT)/2,midPy=(pyS+pyT)/2;
+    drawLabel(ctx,'h = avg velocity = '+slope.toFixed(2),midPx,midPy-18,'#2d6a4f','center');
+    drawLabel(ctx,'\u03A8\u209B\u2192\u209C = x\u209B + (t\u2212s)\u00B7h',midPx,midPy+18,'#2d6a4f88','center');
+
+    // Instantaneous tangent at s
+    var vAtS=vMarg(xs,S);
+    var tangLen=45;
+    var tdx=-1, tdy=-(vAtS/(xHi-xLo))*iH/iW;
+    var tnorm=Math.sqrt(tdx*tdx+tdy*tdy);
+    ctx.strokeStyle='#c2361666';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.moveTo(pxS-tangLen*tdx/tnorm,pyS-tangLen*tdy/tnorm);
+    ctx.lineTo(pxS+tangLen*tdx/tnorm,pyS+tangLen*tdy/tnorm);
+    ctx.stroke();ctx.setLineDash([]);
+    drawLabel(ctx,'v(x\u209B,s)',pxS+tangLen*tdx/tnorm*0.7+12,pyS+tangLen*tdy/tnorm*0.7-8,'#c2361688','left');
+  }
+
+  // Time marker lines
+  ctx.strokeStyle='#00000011';ctx.lineWidth=1;
+  [S,TGT].forEach(function(t){
+    if(t<0.01)return;
+    ctx.beginPath();ctx.moveTo(toCanX(t),pad.t);ctx.lineTo(toCanX(t),pad.t+iH);ctx.stroke();
+  });
+  if(MODE==='ctm'){
+    ctx.beginPath();ctx.moveTo(toCanX(U),pad.t);ctx.lineTo(toCanX(U),pad.t+iH);ctx.stroke();
+  }
+
+  // Note
+  var el=document.getElementById('note');
+  if(MODE==='ode'){
+    el.innerHTML='<strong>Standard ODE sampler:</strong> traces the trajectory step by step. Each dot = one network evaluation (NFE). Currently using <strong>'+NFE+' NFEs</strong>. Drag the NFE slider to see how coarser steps skip over the curve\u2019s fine structure. The question: can we learn to predict the endpoint <em>directly</em> without all these intermediate steps?';
+  } else if(MODE==='cm'){
+    el.innerHTML='<strong>Consistency Model (CM):</strong> learns f\u03B8(x\u209B, s) \u2248 \u03A8<sub>s\u21920</sub>(x\u209B) \u2014 always maps to t=0. The key property: <em>any</em> point on the same trajectory maps to the <em>same</em> x\u2080 (solid + dashed arrows). Training enforces <strong>self-consistency</strong> without needing the oracle flow map. <strong>1 NFE</strong> per sample.';
+  } else if(MODE==='ctm'){
+    el.innerHTML='<strong>Consistency Trajectory Model (CTM):</strong> learns G\u03B8(x\u209B, s, t) \u2248 \u03A8<sub>s\u2192t</sub>(x\u209B) for <em>any</em> target t. The <strong>semigroup property</strong>: the solid blue jump (s\u2192t) = two dashed jumps composed (s\u2192u then u\u2192t). Drag u to decompose differently. CM is the special case t=0.';
+  } else if(MODE==='mf'){
+    el.innerHTML='<strong>Mean Flow (MF):</strong> learns h\u03B8(x\u209B, s, t) = the <em>average velocity</em> (green chord slope). Then \u03A8<sub>s\u2192t</sub> = x\u209B + (t\u2212s)\u00B7h. The red dashed line is the <em>instantaneous</em> velocity at s \u2014 h generalizes this to the average over [s, t]. Notice the chord slope differs from the tangent when the trajectory curves!';
+  }
+}
+
+// Controls
+function updateBtns(){
+  ['btn-ode','btn-cm','btn-ctm','btn-mf'].forEach(function(id){
+    var m=id.split('-')[1];
+    document.getElementById(id).className='mode-btn'+(MODE===m?' on':'');
+  });
+  document.getElementById('t-group').style.display=MODE==='cm'?'none':'';
+  document.getElementById('u-group').style.display=MODE==='ctm'?'':'none';
+  document.getElementById('nfe-group').style.display=MODE==='ode'?'':'none';
+}
+
+document.getElementById('btn-ode').onclick=function(){MODE='ode';updateBtns();draw();};
+document.getElementById('btn-cm').onclick=function(){MODE='cm';updateBtns();draw();};
+document.getElementById('btn-ctm').onclick=function(){MODE='ctm';updateBtns();draw();};
+document.getElementById('btn-mf').onclick=function(){MODE='mf';updateBtns();draw();};
+
+document.getElementById('s-slider').oninput=function(e){S=parseFloat(e.target.value);document.getElementById('s-val').textContent=S.toFixed(2);draw();};
+document.getElementById('t-slider').oninput=function(e){TGT=parseFloat(e.target.value);document.getElementById('t-val').textContent=TGT.toFixed(2);draw();};
+document.getElementById('u-slider').oninput=function(e){U=parseFloat(e.target.value);document.getElementById('u-val').textContent=U.toFixed(2);draw();};
+document.getElementById('nfe-slider').oninput=function(e){NFE=parseInt(e.target.value);document.getElementById('nfe-val').textContent=NFE;draw();};
+
+updateBtns();draw();
+</script>
+</body></html>

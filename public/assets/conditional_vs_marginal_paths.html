@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conditional vs Marginal Paths</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:860px;margin:0 auto;padding:28px 24px 20px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.w h3{font-size:19px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:6px;margin-bottom:10px}
+.desc{font-size:13.5px;color:#555;line-height:1.65;margin-bottom:14px}
+.desc code{font-size:11.5px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+.desc strong{color:#333}
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.col-canvas{flex:1;min-width:420px}
+.col-ctrl{width:220px;min-width:180px}
+canvas{border:1px solid #e2ddd5;border-radius:3px;cursor:crosshair}
+.ctrl-section{margin-bottom:14px}
+.ctrl-label{font-size:11px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:4px}
+.legend-item{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#555}
+.legend-line{width:24px;height:0;border-top:2.5px solid}
+.legend-line.dashed{border-top-style:dashed}
+.legend-line.thin{border-top-width:1px;opacity:.5}
+label{display:flex;align-items:center;gap:6px;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#555;cursor:pointer;margin-bottom:4px}
+.btn{padding:4px 12px;border-radius:2px;border:1px solid #ddd;background:#fff;font-size:11px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .12s}
+.btn:hover{background:#f5f3ef}
+.note{margin-top:12px;padding:10px 14px;background:#fff;border-left:2.5px solid #c23616;border-radius:0 3px 3px 0;font-size:12.5px;line-height:1.6;color:#444}
+.note em{color:#c23616;font-style:normal;font-weight:600}
+input[type=range]{width:100%;accent-color:#1e3a5f;height:4px;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive · Conditional Paths vs ODE Trajectories</h3>
+<p class="desc">
+  Data lives at two points <code>x₀ ∈ {−μ, +μ}</code>; noise is <code>ε ~ 𝒩(0,1)</code>.
+  Each <strong style="color:#999">gray line</strong> is a <em>conditional path</em>
+  <code>xₜ = (1−t)x₀ + tε</code> — always perfectly straight.
+  Each <strong style="color:#c23616">red curve</strong> is an <em>ODE trajectory</em>
+  following the <em>marginal</em> velocity <code>v(x,t) = 𝔼[ε−x₀ | xₜ=x]</code> —
+  clearly curved, because the velocity averages over all possible (x₀, ε) pairs.
+  <strong>Click on the right edge (t=1) to launch new ODE trajectories.</strong>
+</p>
+
+<div class="row">
+  <div class="col-canvas">
+    <canvas id="cv" width="600" height="420"></canvas>
+  </div>
+  <div class="col-ctrl">
+    <div class="ctrl-section">
+      <div class="ctrl-label">Legend</div>
+      <div class="legend-item"><div class="legend-line thin" style="border-color:#999"></div> conditional path (straight)</div>
+      <div class="legend-item"><div class="legend-line" style="border-color:#c23616"></div> ODE trajectory (curved!)</div>
+      <div class="legend-item"><div class="legend-line dashed" style="border-color:#6c3483"></div> marginal velocity field</div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Data separation μ = <span id="mu-val">2.5</span></div>
+      <input type="range" id="mu-slider" min="0.5" max="4.0" step="0.1" value="2.5">
+    </div>
+
+    <div class="ctrl-section">
+      <label><input type="checkbox" id="show-cond" checked style="accent-color:#999"> conditional paths</label>
+      <label><input type="checkbox" id="show-field" checked style="accent-color:#6c3483"> velocity field</label>
+      <label><input type="checkbox" id="show-ode" checked style="accent-color:#c23616"> ODE trajectories</label>
+    </div>
+
+    <div class="ctrl-section">
+      <button class="btn" id="btn-reset" style="margin-right:4px">↺ Reset trajectories</button>
+      <button class="btn" id="btn-auto">+ Many trajectories</button>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label" style="color:#999;font-weight:400;font-size:10px;line-height:1.5">
+        t=0 (left) = data<br>
+        t=1 (right) = noise<br>
+        ODE goes right→left (sampling)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  The conditional paths are all straight — by construction.
+  But the <em>ODE trajectories that a sampler actually follows</em> are curved, because the marginal velocity
+  field routes particles nonlinearly toward data modes. This is why <em>linear interpolation ≠ fast sampling</em>:
+  the solver must still trace these curves accurately.
+</div>
+</div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const DPR = window.devicePixelRatio || 1;
+const W = 600, H = 420;
+cv.width = W * DPR; cv.height = H * DPR;
+cv.style.width = W + 'px'; cv.style.height = H + 'px';
+ctx.scale(DPR, DPR);
+
+const pad = {l:40, r:16, t:16, b:32};
+const iW = W-pad.l-pad.r, iH = H-pad.t-pad.b;
+
+let MU = 2.5;
+const modes = () => [-MU, MU];
+const xRange = () => [-MU-2.5, MU+2.5];
+
+const toX = t => pad.l + t * iW;
+const toY = (x) => {
+  const [xMin,xMax] = xRange();
+  return pad.t + iH - ((x-xMin)/(xMax-xMin))*iH;
+};
+const fromCanvas = (cx,cy) => {
+  const t = (cx - pad.l) / iW;
+  const [xMin,xMax] = xRange();
+  const x = xMin + (1 - (cy - pad.t)/iH) * (xMax - xMin);
+  return [t, x];
+};
+
+// ─── Marginal velocity (closed-form for point-mass mixture) ───
+function vMarginal(x, t) {
+  if (t < 1e-5) return 0;
+  const ms = modes();
+  // log-weights (unnormalized)
+  const logws = ms.map(mu => -0.5 * ((x - (1-t)*mu) / t) ** 2);
+  const maxLw = Math.max(...logws);
+  const ws = logws.map(lw => Math.exp(lw - maxLw));
+  const sumW = ws.reduce((a,b) => a+b, 0);
+  const Exo = ms.reduce((acc,mu,i) => acc + (ws[i]/sumW)*mu, 0);
+  return (x - Exo) / t;
+}
+
+// ─── ODE solver (backward: t=1 → t≈0) ───
+function solveODE(x1, nSteps) {
+  nSteps = nSteps || 800;
+  const tMin = 0.003;
+  const dt = (1 - tMin) / nSteps;
+  const pts = [{t:1, x:x1}];
+  let x = x1;
+  for (let i = 0; i < nSteps; i++) {
+    const t = 1 - i * dt;
+    if (t < tMin) break;
+    const v = vMarginal(x, t);
+    x = x - dt * v; // backward step
+    pts.push({t: t - dt, x: x});
+  }
+  return pts;
+}
+
+// ─── State ───
+let odeStarts = [1.5, 0.6, -0.3, -1.2, 0.0, 2.0, -1.8];
+let showCond = true, showField = true, showOde = true;
+
+// ─── Seeded random for conditional paths ───
+let seed = 42;
+function srand(s) { seed = s; }
+function rand() { seed = (seed * 1664525 + 1013904223) & 0x7FFFFFFF; return seed / 0x7FFFFFFF; }
+function randGauss() { const u1=rand()+1e-10, u2=rand(); return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2); }
+
+// ─── Draw ───
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#fcfbf9'; ctx.fillRect(0,0,W,H);
+  const [xMin, xMax] = xRange();
+
+  // Grid
+  ctx.strokeStyle = '#e8e4df'; ctx.lineWidth = 0.5;
+  for (let t = 0; t <= 1; t += 0.25) {
+    ctx.beginPath(); ctx.moveTo(toX(t), pad.t); ctx.lineTo(toX(t), H-pad.b); ctx.stroke();
+  }
+  for (let i = 0; i < 7; i++) {
+    const x = xMin + i*(xMax-xMin)/6;
+    ctx.beginPath(); ctx.moveTo(pad.l, toY(x)); ctx.lineTo(W-pad.r, toY(x)); ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#888'; ctx.font = "9px 'IBM Plex Mono',monospace"; ctx.textAlign = 'center';
+  [0, 0.25, 0.5, 0.75, 1].forEach(t => { ctx.fillText(t.toFixed(2), toX(t), H-pad.b+14); });
+  ctx.fillText('t (time)', pad.l + iW/2, H-4);
+  ctx.save(); ctx.translate(10, pad.t+iH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('x (position)', 0, 0); ctx.restore();
+
+  // Data mode markers at t=0
+  const ms = modes();
+  ms.forEach(mu => {
+    const cx = toX(0), cy = toY(mu);
+    ctx.fillStyle = '#1e3a5f';
+    ctx.beginPath(); ctx.arc(cx, cy, 5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx, cy, 2, 0, 2*Math.PI); ctx.fill();
+  });
+  // Labels
+  ctx.fillStyle = '#1e3a5f'; ctx.font = "bold 10px 'IBM Plex Mono',monospace"; ctx.textAlign = 'left';
+  ctx.fillText('data', toX(0)-2, toY(ms[1])-10);
+
+  // ─── Velocity field ───
+  if (showField) {
+    ctx.globalAlpha = 0.3;
+    for (let ti = 0.05; ti <= 0.98; ti += 0.08) {
+      for (let xi = xMin+0.3; xi <= xMax-0.3; xi += (xMax-xMin)/14) {
+        const v = vMarginal(xi, ti);
+        const cx = toX(ti), cy = toY(xi);
+        // Arrow: direction is (dt, v*dt) in (t,x) space → (dx_canvas, -dy_canvas)
+        const scale = 0.04; // arrow scale in t-units
+        const dx = scale * iW; // pixels in t direction
+        const dy = -v * scale * iH / (xMax-xMin); // pixels in x direction
+        const len = Math.sqrt(dx*dx + dy*dy);
+        if (len < 1) continue;
+        const maxLen = 18;
+        const frac = Math.min(len, maxLen) / len;
+        const adx = dx*frac, ady = dy*frac;
+
+        ctx.strokeStyle = '#6c3483'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+adx, cy+ady); ctx.stroke();
+        // arrowhead
+        const ang = Math.atan2(ady, adx);
+        const hl = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx+adx, cy+ady);
+        ctx.lineTo(cx+adx - hl*Math.cos(ang-0.5), cy+ady - hl*Math.sin(ang-0.5));
+        ctx.moveTo(cx+adx, cy+ady);
+        ctx.lineTo(cx+adx - hl*Math.cos(ang+0.5), cy+ady - hl*Math.sin(ang+0.5));
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ─── Conditional paths (straight lines) ───
+  if (showCond) {
+    srand(12345);
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+    ms.forEach(mu => {
+      for (let j = 0; j < 12; j++) {
+        const eps = randGauss();
+        const x0 = mu, x1 = eps; // at t=0: x0, at t=1: eps (since x_t = (1-t)*x0 + t*eps)
+        // But the path is x_t = (1-t)*mu + t*eps, so at t=0 it's mu, at t=1 it's eps
+        ctx.beginPath();
+        ctx.moveTo(toX(0), toY(x0));
+        ctx.lineTo(toX(1), toY(x1));
+        ctx.stroke();
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // ─── ODE trajectories ───
+  if (showOde) {
+    const colors = ['#c23616','#d35400','#a93226','#e74c3c','#c0392b','#b03a2e','#d4553a','#cb4335','#a04020','#bf3b2b'];
+    odeStarts.forEach((x1, idx) => {
+      const traj = solveODE(x1);
+      ctx.strokeStyle = colors[idx % colors.length];
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      traj.forEach((p,i) => {
+        const cx = toX(p.t), cy = toY(p.x);
+        if (cy < pad.t-5 || cy > H-pad.b+5) return; // clip
+        i === 0 ? ctx.moveTo(cx,cy) : ctx.lineTo(cx,cy);
+      });
+      ctx.stroke();
+
+      // start dot at t=1
+      ctx.fillStyle = colors[idx % colors.length];
+      ctx.beginPath(); ctx.arc(toX(1), toY(x1), 3.5, 0, 2*Math.PI); ctx.fill();
+
+      // end dot at t≈0
+      const last = traj[traj.length-1];
+      ctx.beginPath(); ctx.arc(toX(last.t), toY(last.x), 3.5, 0, 2*Math.PI); ctx.fill();
+    });
+  }
+
+  // Noise label at t=1
+  ctx.fillStyle = '#c23616'; ctx.font = "bold 10px 'IBM Plex Mono',monospace"; ctx.textAlign = 'right';
+  ctx.fillText('noise', toX(1)+2, pad.t + 14);
+}
+
+// ─── Interactions ───
+cv.addEventListener('click', e => {
+  const rect = cv.getBoundingClientRect();
+  const sx = W / rect.width, sy = H / rect.height;
+  const [t, x] = fromCanvas((e.clientX - rect.left)*sx, (e.clientY - rect.top)*sy);
+  if (t > 0.85) { // click near t=1 edge
+    odeStarts.push(x);
+    draw();
+  }
+});
+
+document.getElementById('mu-slider').addEventListener('input', e => {
+  MU = parseFloat(e.target.value);
+  document.getElementById('mu-val').textContent = MU.toFixed(1);
+  draw();
+});
+
+document.getElementById('show-cond').addEventListener('change', e => { showCond = e.target.checked; draw(); });
+document.getElementById('show-field').addEventListener('change', e => { showField = e.target.checked; draw(); });
+document.getElementById('show-ode').addEventListener('change', e => { showOde = e.target.checked; draw(); });
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  odeStarts = [1.5, 0.6, -0.3, -1.2, 0.0, 2.0, -1.8];
+  draw();
+});
+
+document.getElementById('btn-auto').addEventListener('click', () => {
+  odeStarts = [];
+  for (let x = -2.5; x <= 2.5; x += 0.4) odeStarts.push(x);
+  draw();
+});
+
+draw();
+</script>
+</body>
+</html>

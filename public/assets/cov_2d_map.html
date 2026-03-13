@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2D Change of Variable — Discrete Layers</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Crimson Pro", Georgia, serif;
+        background: transparent;
+      }
+      .w {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 24px 22px 18px;
+        background: #fcfbf9;
+        border-radius: 3px;
+        border: 1px solid #e2ddd5;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      }
+      h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1a1a1a;
+        border-bottom: 2px solid #1a1a1a;
+        padding-bottom: 5px;
+        margin-bottom: 8px;
+      }
+      .desc {
+        font-size: 13px;
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 14px;
+      }
+      .desc code {
+        font-size: 11px;
+        background: #f0ece6;
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-family: "IBM Plex Mono", monospace;
+      }
+      .panels {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+      }
+      .panel {
+        text-align: center;
+      }
+      .panel canvas {
+        border: 1px solid #e2ddd5;
+        border-radius: 3px;
+      }
+      .panel-label {
+        font-size: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #888;
+        margin-top: 4px;
+      }
+      .slider-row {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+      }
+      .slider-group {
+        flex: 1;
+        min-width: 220px;
+      }
+      .slider-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #333;
+        font-family: "IBM Plex Mono", monospace;
+        margin-bottom: 2px;
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: #e87203;
+        height: 5px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #555;
+        cursor: pointer;
+      }
+      .note {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #f8f6f2;
+        border-radius: 3px;
+        font-size: 11.5px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #555;
+        line-height: 1.6;
+        border-left: 2.5px solid #e87203;
+      }
+      .badge {
+        font-size: 22px;
+        font-weight: 700;
+        font-family: "IBM Plex Mono", monospace;
+        color: #e87203;
+        min-width: 138px;
+        text-align: center;
+        line-height: 1.1;
+      }
+      .badge .sub {
+        font-size: 9px;
+        font-weight: 400;
+        color: #999;
+      }
+      .small {
+        font-size: 10px;
+        color: #999;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="w">
+      <h3>
+        Interactive · 2D Change of Variable: Discrete Layers from Noise to Data
+      </h3>
+      <p class="desc">
+        Start from Gaussian noise and apply a chain of discrete
+        change-of-variable maps. The slider shows the layer index
+        <code>L = 1,2,⋯,100,⋯,∞</code>. At finite <code>L</code>, the transport
+        is written as a composition of maps <code>Ψ₁ ∘ ⋯ ∘ Ψ_L</code>. At
+        <code>L=∞</code>, this becomes the <strong>continuity equation</strong>
+        <code>∂pₜ/∂t = −∇·(pₜ v)</code>. The deformed background mesh stays
+        visible so you can directly see the Jacobian effect: compressed cells
+        indicate higher density, stretched cells indicate lower density.
+      </p>
+
+      <div class="slider-row">
+        <div class="slider-group">
+          <div class="slider-label">
+            Discrete transport layer
+            <span class="small"
+              >(1 = first map, 100 = data, ∞ = continuous-limit reference)</span
+            >
+          </div>
+          <input
+            type="range"
+            id="L-slider"
+            min="1"
+            max="101"
+            step="1"
+            value="1"
+          />
+        </div>
+        <div class="badge" id="L-badge">
+          L = 1
+          <div class="sub">first map</div>
+        </div>
+      </div>
+
+      <div class="slider-row">
+        <label
+          ><input
+            type="checkbox"
+            id="show-grid"
+            checked
+            style="accent-color: #e87203"
+          />
+          grid deformation</label
+        >
+        <label
+          ><input
+            type="checkbox"
+            id="show-density"
+            checked
+            style="accent-color: #1e3a5f"
+          />
+          density p_L</label
+        >
+        <label
+          ><input
+            type="checkbox"
+            id="show-traj"
+            checked
+            style="accent-color: #8e44ad"
+          />
+          trajectories</label
+        >
+        <label
+          ><input
+            type="checkbox"
+            id="show-dots"
+            checked
+            style="accent-color: #333"
+          />
+          particles</label
+        >
+      </div>
+
+      <div class="panels">
+        <div class="panel">
+          <canvas id="cv" width="680" height="420"></canvas>
+        </div>
+      </div>
+
+      <div class="note" id="note"></div>
+    </div>
+
+    <script>
+      const cv = document.getElementById("cv"),
+        ctx = cv.getContext("2d");
+      const DPR = window.devicePixelRatio || 1,
+        CW = 680,
+        CH = 420;
+      cv.width = CW * DPR;
+      cv.height = CH * DPR;
+      cv.style.width = CW + "px";
+      cv.style.height = CH + "px";
+      ctx.scale(DPR, DPR);
+
+      let currentL = 1,
+        showGrid = true,
+        showDensity = true,
+        showTraj = true,
+        showDots = true;
+      const lo = -4.5,
+        hi = 4.5;
+      const baseLayers = 100;
+      const infRefLayers = 4000;
+
+      // 3-mode data distribution
+      const modes = [
+        { x: -2.2, y: 1.5, w: 0.35 },
+        { x: 2.0, y: 0.8, w: 0.35 },
+        { x: 0, y: -2.0, w: 0.3 },
+      ];
+
+      // Marginal velocity (closed form for point-mass mixture + linear interpolation)
+      function vField(x, y, t) {
+        if (t < 0.005) return [0, 0];
+        const sig = t,
+          al = 1 - t,
+          s2 = sig * sig;
+        const lws = modes.map((m) => {
+          const dx = x - al * m.x,
+            dy = y - al * m.y;
+          return Math.log(m.w) - (0.5 * (dx * dx + dy * dy)) / s2;
+        });
+        const mx = Math.max(...lws);
+        const ws = lws.map((lw) => Math.exp(lw - mx));
+        const S = ws.reduce((a, b) => a + b, 0);
+        let Ex0x = 0,
+          Ex0y = 0;
+        for (let k = 0; k < modes.length; k++) {
+          Ex0x += (ws[k] / S) * modes[k].x;
+          Ex0y += (ws[k] / S) * modes[k].y;
+        }
+        const eex = (x - al * Ex0x) / sig,
+          eey = (y - al * Ex0y) / sig;
+        return [-Ex0x + eex, -Ex0y + eey];
+      }
+
+      // Density at (x,y) for time t (Gaussian mixture marginal)
+      function density(x, y, t) {
+        const sig = Math.max(t, 0.005),
+          s2 = sig * sig;
+        let d = 0;
+        for (const m of modes) {
+          const dx = x - (1 - t) * m.x,
+            dy = y - (1 - t) * m.y;
+          d +=
+            (m.w * Math.exp((-0.5 * (dx * dx + dy * dy)) / s2)) /
+            (2 * Math.PI * s2);
+        }
+        return d;
+      }
+
+      const toX = (v) => 40 + ((v - lo) / (hi - lo)) * (CW - 60);
+      const toY = (v) => 10 + (CH - 30) - ((v - lo) / (hi - lo)) * (CH - 30);
+
+      // seeded RNG for reproducibility
+      let seed = 42;
+      function rnd() {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      }
+      function randn() {
+        const u1 = Math.max(rnd(), 1e-12),
+          u2 = rnd();
+        return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      }
+
+      const nPart = 420;
+      const partStarts = [];
+      for (let p = 0; p < nPart; p++)
+        partStarts.push({ x: 1.5 * randn(), y: 1.5 * randn() });
+
+      const gridN = 20;
+      const gridStarts = [];
+      for (let i = 0; i <= gridN; i++) {
+        gridStarts[i] = [];
+        for (let j = 0; j <= gridN; j++) {
+          gridStarts[i][j] = {
+            x: lo + (i / gridN) * (hi - lo),
+            y: lo + (j / gridN) * (hi - lo),
+          };
+        }
+      }
+
+      function computeTraj(x0, y0, nSteps) {
+        const traj = [{ x: x0, y: y0 }];
+        let x = x0,
+          y = y0;
+        const dt = 1 / nSteps;
+        for (let s = 0; s < nSteps; s++) {
+          const t = 1 - s * dt;
+          if (t < 0.005) break;
+          const [vx, vy] = vField(x, y, t);
+          x -= dt * vx;
+          y -= dt * vy;
+          traj.push({ x, y });
+        }
+        return traj;
+      }
+
+      // precompute base 100-layer trajectories
+      const partTrajs = partStarts.map((s) =>
+        computeTraj(s.x, s.y, baseLayers),
+      );
+      const gridTrajs = [];
+      for (let i = 0; i <= gridN; i++) {
+        gridTrajs[i] = [];
+        for (let j = 0; j <= gridN; j++) {
+          gridTrajs[i][j] = computeTraj(
+            gridStarts[i][j].x,
+            gridStarts[i][j].y,
+            baseLayers,
+          );
+        }
+      }
+
+      // finer continuous-limit reference endpoint
+      const partEndsInf = partStarts.map((s) => {
+        const tr = computeTraj(s.x, s.y, infRefLayers);
+        return tr[tr.length - 1];
+      });
+      const gridEndsInf = [];
+      for (let i = 0; i <= gridN; i++) {
+        gridEndsInf[i] = [];
+        for (let j = 0; j <= gridN; j++) {
+          const tr = computeTraj(
+            gridStarts[i][j].x,
+            gridStarts[i][j].y,
+            infRefLayers,
+          );
+          gridEndsInf[i][j] = tr[tr.length - 1];
+        }
+      }
+
+      function stateIsInfinity() {
+        return currentL === 101;
+      }
+      function effectiveLayer() {
+        return stateIsInfinity() ? baseLayers : currentL;
+      }
+      function currentTime() {
+        return stateIsInfinity() ? 0 : Math.max(0, 1 - currentL / baseLayers);
+      }
+      function getGridPos(i, j) {
+        if (stateIsInfinity()) return gridEndsInf[i][j];
+        const idx = Math.min(currentL, gridTrajs[i][j].length - 1);
+        return gridTrajs[i][j][idx];
+      }
+      function getPartPos(p) {
+        if (stateIsInfinity()) return partEndsInf[p];
+        const idx = Math.min(currentL, partTrajs[p].length - 1);
+        return partTrajs[p][idx];
+      }
+      function getPartEnd(p) {
+        return partTrajs[p][partTrajs[p].length - 1];
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, CW, CH);
+        ctx.fillStyle = "#fcfbf9";
+        ctx.fillRect(0, 0, CW, CH);
+
+        const t = currentTime();
+        const Ldisp = stateIsInfinity() ? "∞" : String(currentL);
+
+        // density heatmap
+        if (showDensity) {
+          const res = 60;
+          const pw = (CW - 60) / res,
+            ph = (CH - 30) / res;
+          let maxD = 0;
+          const dArr = [];
+          for (let py = 0; py < res; py++) {
+            dArr[py] = [];
+            for (let px = 0; px < res; px++) {
+              const xv = lo + ((px + 0.5) / res) * (hi - lo);
+              const yv = lo + (1 - (py + 0.5) / res) * (hi - lo);
+              const d = density(xv, yv, Math.max(t, 0.005));
+              dArr[py][px] = d;
+              if (d > maxD) maxD = d;
+            }
+          }
+          for (let py = 0; py < res; py++)
+            for (let px = 0; px < res; px++) {
+              const d = dArr[py][px] / (maxD || 1);
+              const b = Math.pow(d, 0.4);
+              ctx.fillStyle = `rgba(30,58,95,${(b * 0.25).toFixed(3)})`;
+              ctx.fillRect(40 + px * pw, 10 + py * ph, pw + 0.5, ph + 0.5);
+            }
+        }
+
+        // grid lines
+        if (showGrid) {
+          ctx.globalAlpha = 0.34;
+          ctx.strokeStyle = "#e87203";
+          ctx.lineWidth = 0.85;
+          for (let j = 0; j <= gridN; j++) {
+            ctx.beginPath();
+            for (let i = 0; i <= gridN; i++) {
+              const p = getGridPos(i, j);
+              const px = toX(p.x),
+                py = toY(p.y);
+              i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+            }
+            ctx.stroke();
+          }
+          for (let i = 0; i <= gridN; i++) {
+            ctx.beginPath();
+            for (let j = 0; j <= gridN; j++) {
+              const p = getGridPos(i, j);
+              const px = toX(p.x),
+                py = toY(p.y);
+              j ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+            }
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        // trajectories
+        if (showTraj && effectiveLayer() > 0) {
+          const cols = ["#8e44ad", "#1e3a5f", "#2d6a4f"];
+          const trajLimit = effectiveLayer();
+          const stride = Math.max(1, Math.floor(trajLimit / 170));
+          for (let p = 0; p < partTrajs.length; p++) {
+            const traj = partTrajs[p];
+            const endP = getPartEnd(p);
+            let bestM = 0,
+              bestD = 1e9;
+            modes.forEach((m, mi) => {
+              const d = (endP.x - m.x) ** 2 + (endP.y - m.y) ** 2;
+              if (d < bestD) {
+                bestD = d;
+                bestM = mi;
+              }
+            });
+            ctx.strokeStyle = cols[bestM];
+            ctx.lineWidth = 0.8;
+            ctx.globalAlpha = 0.18;
+            ctx.beginPath();
+            let first = true;
+            const lastIdx = Math.min(trajLimit, traj.length - 1);
+            for (let s = 0; s <= lastIdx; s += stride) {
+              const pt = traj[s];
+              const px = toX(pt.x),
+                py = toY(pt.y);
+              if (first) {
+                ctx.moveTo(px, py);
+                first = false;
+              } else ctx.lineTo(px, py);
+            }
+            if (lastIdx % stride !== 0) {
+              const pt = traj[lastIdx];
+              ctx.lineTo(toX(pt.x), toY(pt.y));
+            }
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        // particles
+        if (showDots) {
+          const cols = ["#8e44ad", "#1e3a5f", "#2d6a4f"];
+          ctx.globalAlpha = 0.52;
+          for (let p = 0; p < partTrajs.length; p++) {
+            const pos = getPartPos(p);
+            const px = toX(pos.x),
+              py = toY(pos.y);
+            if (px < 0 || px > CW || py < 0 || py > CH) continue;
+            const endP = getPartEnd(p);
+            let bestM = 0,
+              bestD = 1e9;
+            modes.forEach((m, mi) => {
+              const d = (endP.x - m.x) ** 2 + (endP.y - m.y) ** 2;
+              if (d < bestD) {
+                bestD = d;
+                bestM = mi;
+              }
+            });
+            ctx.fillStyle = effectiveLayer() < 5 ? "#888" : cols[bestM];
+            ctx.beginPath();
+            ctx.arc(px, py, effectiveLayer() < 5 ? 1.5 : 2, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        // mode markers
+        if (effectiveLayer() > 300) {
+          ctx.globalAlpha = Math.min((effectiveLayer() - 300) / 300, 1);
+          for (const m of modes) {
+            const px = toX(m.x),
+              py = toY(m.y);
+            ctx.strokeStyle = "rgba(0,0,0,.4)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(px - 5, py - 5);
+            ctx.lineTo(px + 5, py + 5);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(px + 5, py - 5);
+            ctx.lineTo(px - 5, py + 5);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        // labels
+        ctx.fillStyle = "#e87203";
+        ctx.font = "bold 14px 'IBM Plex Mono',monospace";
+        ctx.textAlign = "left";
+        if (stateIsInfinity()) ctx.fillText("L = ∞", 44, 26);
+        else ctx.fillText(`L = ${Ldisp}`, 44, 26);
+
+        ctx.fillStyle = "#888";
+        ctx.font = "10px 'IBM Plex Mono',monospace";
+        if (currentL === 1)
+          ctx.fillText("One big Ψ:  noise → Ψ → data", 44, 40);
+        else if (currentL === 2) ctx.fillText("noise → Ψ₁ → Ψ₂ → data", 44, 40);
+        else if (stateIsInfinity()) ctx.fillText("∂pₜ/∂t = −∇·(pₜ v)", 44, 40);
+        else ctx.fillText(`noise → Ψ₁ → Ψ₂ → ⋯ → Ψ_${currentL} → data`, 44, 40);
+
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#aaa";
+        ctx.font = "9px 'IBM Plex Mono',monospace";
+        ctx.fillText(
+          stateIsInfinity()
+            ? "t ≈ 0 (continuous limit)"
+            : `t ≈ ${t.toFixed(3)}`,
+          CW - 20,
+          CH - 8,
+        );
+
+        // Jacobian annotation
+        if (showGrid && effectiveLayer() > 100) {
+          ctx.fillStyle = "rgba(142,68,173,.6)";
+          ctx.font = "9px 'IBM Plex Mono',monospace";
+          ctx.textAlign = "center";
+          const m = modes[0];
+          const mx = toX(m.x),
+            my = toY(m.y);
+          ctx.fillText("cells compress", mx, my + 20);
+          ctx.fillText("→ density ↑", mx, my + 30);
+        }
+      }
+
+      function updateBadge() {
+        const badge = document.getElementById("L-badge");
+        if (stateIsInfinity()) {
+          badge.innerHTML = 'L = ∞<div class="sub">continuous limit</div>';
+        } else if (currentL === 0) {
+          badge.innerHTML = 'L = 1<div class="sub">first map</div>';
+        } else if (currentL === baseLayers) {
+          badge.innerHTML = 'L = 100<div class="sub">data state</div>';
+        } else {
+          badge.innerHTML = `L = ${currentL}<div class="sub">${((100 * currentL) / baseLayers).toFixed(1)}% of transport</div>`;
+        }
+      }
+
+      function updateNote() {
+        const el = document.getElementById("note");
+        if (currentL === 1) {
+          el.innerHTML =
+            "<strong>L = 1:</strong> One big change-of-variable Ψ. Each particle jumps in a straight line from noise to data. The grid deforms in one shot — cells near data modes compress (density ↑), cells in between stretch (density ↓). This is the standard formula: <strong>p₁(x₁) = p₀(Ψ⁻¹(x₁)) · |det ∂Ψ⁻¹/∂x₁|</strong>.";
+        } else if (currentL === 2) {
+          el.innerHTML =
+            "<strong>L = 2:</strong> 2 chained maps Ψ₁ ∘ Ψ₂. Each step is a smaller change-of-variable — trajectories have 2 visible segments. The Jacobians multiply, or in log form add up: <strong>log p_T = log p₀ − Σₖ log|det ∂Ψₖ/∂x|</strong>.";
+        } else if (stateIsInfinity()) {
+          el.innerHTML =
+            "<strong>L = ∞:</strong> The continuous limit. Infinitely many infinitesimal change-of-variable maps give the <strong>continuity equation: ∂pₜ/∂t = −∇·(pₜ v)</strong>. The grid deformation is the true flow map in the continuous limit.";
+        } else {
+          el.innerHTML =
+            "<strong>L = " +
+            currentL +
+            ":</strong> " +
+            currentL +
+            " chained maps Ψ₁ ∘ ⋯ ∘ Ψ_" +
+            currentL +
+            ". Each step is a smaller change-of-variable — trajectories have " +
+            currentL +
+            " visible segments. The Jacobians multiply, or in log form add up: <strong>log p_T = log p₀ − Σₖ log|det ∂Ψₖ/∂x|</strong>.";
+        }
+      }
+
+      document.getElementById("L-slider").oninput = (e) => {
+        currentL = parseInt(e.target.value, 10);
+        updateBadge();
+        draw();
+        updateNote();
+      };
+      document.getElementById("show-grid").onchange = (e) => {
+        showGrid = e.target.checked;
+        draw();
+      };
+      document.getElementById("show-density").onchange = (e) => {
+        showDensity = e.target.checked;
+        draw();
+      };
+      document.getElementById("show-traj").onchange = (e) => {
+        showTraj = e.target.checked;
+        draw();
+      };
+      document.getElementById("show-dots").onchange = (e) => {
+        showDots = e.target.checked;
+        draw();
+      };
+
+      updateBadge();
+      draw();
+      updateNote();
+    </script>
+  </body>
+</html>

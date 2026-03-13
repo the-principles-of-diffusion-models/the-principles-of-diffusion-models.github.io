@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three Dynamics, One Shared Marginal</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:780px;margin:0 auto;padding:24px 22px 18px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+h3{font-size:18px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:5px;margin-bottom:8px}
+.desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
+.desc code{font-size:11px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+canvas{display:block;margin:0 auto;border:1px solid #e2ddd5;border-radius:3px}
+.ctrl-row{display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.slider-group{flex:1;min-width:200px}
+.slider-label{font-size:10.5px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+input[type=range]{width:100%;height:6px}
+.dir-badge{font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;padding:3px 10px;border-radius:2px;min-width:100px;text-align:center;transition:all .3s ease}
+.note{margin-top:10px;padding:8px 12px;background:#f8f6f2;border-radius:3px;font-size:11.5px;
+  font-family:'IBM Plex Mono',monospace;color:#555;line-height:1.6;border-left:2.5px solid #1e3a5f}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive &middot; Three Dynamics, One Shared Marginal p&#x209C;</h3>
+<p class="desc">
+  The forward process defines a family of marginals p&#x209C;.
+  Three dynamics all produce this <em>same</em> p&#x209C; at every t, but flow in different directions.
+  <strong>Drag the slider</strong>: moving <strong>rightward</strong> (t&#x2191;) lights up the forward process and forward PF-ODE (data&#x2192;noise).
+  Moving <strong>leftward</strong> (t&#x2193;) lights up the reverse SDE and reverse PF-ODE (noise&#x2192;data).
+  The <strong>PF-ODE works both ways</strong> &mdash; it is the only dynamics that is reversible in time.
+</p>
+
+<div class="ctrl-row">
+  <div class="slider-group">
+    <div class="slider-label">
+      <span style="color:#2d6a4f">data (t=0)</span>
+      &nbsp; &#x2190; time t = <span id="t-val" style="font-size:13px">0.50</span> &#x2192; &nbsp;
+      <span style="color:#888">noise (t=1)</span>
+    </div>
+    <input type="range" id="t-slider" min="0.02" max="0.98" step="0.005" value="0.50" style="accent-color:#1e3a5f">
+  </div>
+  <div class="dir-badge" id="dir-badge" style="background:#eee;color:#888">drag slider</div>
+</div>
+
+<canvas id="cv" width="720" height="410"></canvas>
+<div class="note" id="note">Drag the slider to see which dynamics are active in each direction. The PF-ODE (bottom) lights up in <em>both</em> directions.</div>
+</div>
+
+<script>
+var DPR=window.devicePixelRatio||1, CW=720, CH=410;
+var MU=2.5, curT=0.50, prevT=0.50, slideDir=0;
+// Momentum-based direction tracking (resists jitter)
+var momentum=0; // running weighted velocity, >0 = forward, <0 = reverse
+var MOMENTUM_DECAY=0.85;
+var MOMENTUM_THRESH=0.008; // minimum momentum to switch direction
+var idleTimer=null;
+
+// Schedule: cosine VP
+function alpha(t){return Math.cos(t*Math.PI/2);}
+function sigma(t){return Math.sin(t*Math.PI/2);}
+function alphaDot(t){return -Math.PI/2*Math.sin(t*Math.PI/2);}
+function fC(t){var a=alpha(t);return Math.abs(a)<1e-6?0:alphaDot(t)/a;}
+function gC(t){
+  var sig=sigma(t),sd=Math.PI/2*Math.cos(t*Math.PI/2),f=fC(t);
+  return Math.sqrt(Math.max(2*sig*sd-2*f*sig*sig,0));
+}
+
+function pt(x,t){
+  var sig=Math.max(sigma(t),0.008),al=alpha(t);
+  var g=function(x,m,s){return Math.exp(-0.5*((x-m)/s)**2)/(s*Math.sqrt(2*Math.PI));};
+  return 0.5*g(x,al*MU,sig)+0.5*g(x,-al*MU,sig);
+}
+
+function scoreFn(x,t){
+  var sig=Math.max(sigma(t),0.008),al=alpha(t),s2=sig*sig;
+  var lw1=-0.5*((x-al*MU)/sig)**2,lw2=-0.5*((x+al*MU)/sig)**2;
+  var mx=Math.max(lw1,lw2);
+  var w1=Math.exp(lw1-mx),w2=Math.exp(lw2-mx),S=w1+w2;
+  return(w1*(-(x-al*MU)/s2)+w2*(-(x+al*MU)/s2))/S;
+}
+
+function mkRng(seed){var s=seed;return{
+  next:function(){s=(s*1664525+1013904223)&0x7FFFFFFF;return s/0x7FFFFFFF;},
+  gauss:function(){var u1=this.next()+1e-10,u2=this.next();return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);}
+};}
+function mGauss(){var u1=Math.random()+1e-10,u2=Math.random();return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);}
+
+// Pre-compute trajectories
+var NP=250, NSTEPS=400;
+var fwdTrajs=[], revTrajs=[], odeTrajs=[];
+
+(function(){
+  var dt=1/NSTEPS;
+
+  // Forward SDE: t 0→1
+  var r1=mkRng(42);
+  for(var p=0;p<NP;p++){
+    var x=r1.next()<0.5?MU:-MU;
+    var traj=[x];
+    for(var s=0;s<NSTEPS;s++){
+      var t=Math.max(s*dt,0.005);
+      x+=fC(t)*x*dt+gC(t)*Math.sqrt(dt)*mGauss();
+      traj.push(x);
+    }
+    fwdTrajs.push(traj);
+  }
+
+  // Reverse SDE: t 1→0
+  var r2=mkRng(1234);
+  for(var p=0;p<NP;p++){
+    var x=r2.gauss();
+    var traj=new Array(NSTEPS+1);traj[NSTEPS]=x;
+    for(var s=NSTEPS;s>0;s--){
+      var t=Math.max(s*dt,0.005);
+      var f=fC(t),g=gC(t),g2=g*g,sc=scoreFn(x,t);
+      x+=(-(f*x-g2*sc))*dt+g*Math.sqrt(dt)*mGauss();
+      traj[s-1]=x;
+    }
+    revTrajs.push(traj);
+  }
+
+  // PF-ODE: t 1→0 (deterministic, same init as reverse)
+  var r3=mkRng(1234);
+  for(var p=0;p<NP;p++){
+    var x=r3.gauss();
+    var traj=new Array(NSTEPS+1);traj[NSTEPS]=x;
+    for(var s=NSTEPS;s>0;s--){
+      var t=Math.max(s*dt,0.005);
+      var f=fC(t),g=gC(t),g2=g*g,sc=scoreFn(x,t);
+      x+=(-(f*x-0.5*g2*sc))*dt;
+      traj[s-1]=x;
+    }
+    odeTrajs.push(traj);
+  }
+})();
+
+function getParts(trajs,t){
+  var idx=Math.round(t*NSTEPS);idx=Math.max(0,Math.min(NSTEPS,idx));
+  var a=[];for(var i=0;i<trajs.length;i++)a.push(trajs[i][idx]);return a;
+}
+
+function draw(){
+  var cv=document.getElementById('cv');
+  cv.width=CW*DPR;cv.height=CH*DPR;cv.style.width=CW+'px';cv.style.height=CH+'px';
+  var ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
+  ctx.fillStyle='#fcfbf9';ctx.fillRect(0,0,CW,CH);
+
+  var xLo=-5,xHi=5;
+  var pad={l:50,r:15,t:10,b:12};
+  var iW=CW-pad.l-pad.r;
+  var toX=function(x){return pad.l+((x-xLo)/(xHi-xLo))*iW;};
+
+  // Smooth opacity: momentum determines how lit each strip is
+  // fwd lights up when momentum > 0, rev when momentum < 0, ode always
+  var fwdAlpha, revAlpha, odeAlpha;
+  var m=momentum;
+  if(slideDir===0){
+    // Idle: all equally visible
+    fwdAlpha=0.7;revAlpha=0.7;odeAlpha=0.7;
+  } else {
+    // Smoothly interpolate based on momentum strength
+    var strength=Math.min(Math.abs(m)/0.04,1); // 0..1
+    if(slideDir>0){
+      fwdAlpha=0.3+0.7*strength;
+      revAlpha=0.7-0.5*strength;
+      odeAlpha=0.3+0.7*strength;
+    } else {
+      fwdAlpha=0.7-0.5*strength;
+      revAlpha=0.3+0.7*strength;
+      odeAlpha=0.3+0.7*strength;
+    }
+  }
+  var fwdLit=fwdAlpha>0.5;
+  var revLit=revAlpha>0.5;
+  var odeLit=odeAlpha>0.5;
+
+  // Strip layout
+  var stripH=120, gap=8;
+  var strip1Top=pad.t;
+  var strip2Top=strip1Top+stripH+gap;
+  var strip3Top=strip2Top+stripH+gap;
+
+  var strips=[
+    {trajs:fwdTrajs, top:strip1Top, col:'#2d6a4f', lit:fwdLit, alpha:fwdAlpha,
+     label:'Forward Process / Forward SDE (Anchor p\u209C)',
+     eq:'x\u209C = \u03B1\u209Cx\u2080 + \u03C3\u209C\u03B5  \u2261  dx = f(t)x dt + g(t)dw',
+     dir:'data \u2192 noise  (t: 0 \u2192 '+curT.toFixed(2)+')'},
+    {trajs:revTrajs, top:strip2Top, col:'#c23616', lit:revLit, alpha:revAlpha,
+     label:'Reverse-Time SDE',
+     eq:'dx = [f(t)x \u2212 g\u00B2(t)\u2207log p\u209C] dt + g(t)d\u0175',
+     dir:'data \u2190 noise  (t: 1 \u2192 '+curT.toFixed(2)+')'},
+    {trajs:odeTrajs, top:strip3Top, col:'#1e3a5f', lit:odeLit, alpha:odeAlpha,
+     label:'Probability-Flow ODE',
+     eq:'dx/dt = f(t)x \u2212 \u00BDg\u00B2(t)\u2207log p\u209C',
+     dir:slideDir>=0
+       ?'data \u2192 noise  (t: 0 \u2192 '+curT.toFixed(2)+')'
+       :'data \u2190 noise  (t: 1 \u2192 '+curT.toFixed(2)+')'},
+  ];
+
+  // Anchor density
+  var maxD=0;
+  for(var i=0;i<=200;i++){var x=xLo+i/200*(xHi-xLo);var d=pt(x,curT);if(d>maxD)maxD=d;}
+
+  strips.forEach(function(st){
+    var particles=getParts(st.trajs,curT);
+    var base=st.top+stripH;
+    var dimAlpha=st.alpha; // smooth 0..1
+
+    // Strip background (subtle tint proportional to alpha)
+    ctx.fillStyle='rgba(0,0,0,'+(0.005+0.01*dimAlpha).toFixed(3)+')';
+    ctx.fillRect(pad.l,st.top,iW,stripH);
+
+    // Dim overlay for low-alpha strips
+    if(dimAlpha<0.5){
+      ctx.fillStyle='rgba(252,251,249,'+(0.65-0.65*dimAlpha).toFixed(3)+')';
+      ctx.fillRect(pad.l,st.top,iW,stripH);
+    }
+
+    ctx.globalAlpha=dimAlpha;
+
+    // Axis line
+    ctx.strokeStyle='#e8e4df';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(pad.l,base-12);ctx.lineTo(CW-pad.r,base-12);ctx.stroke();
+
+    // Histogram
+    var nBins=40,binW2=(xHi-xLo)/nBins;
+    var bins=new Array(nBins).fill(0);
+    for(var i=0;i<particles.length;i++){
+      var bi=Math.floor((particles[i]-xLo)/binW2);
+      if(bi>=0&&bi<nBins)bins[bi]++;
+    }
+    var maxBin=Math.max.apply(null,bins)||1;
+    var histH=stripH-38, histScale=histH/maxBin;
+
+    ctx.fillStyle=st.col+'22';ctx.strokeStyle=st.col+'44';ctx.lineWidth=0.5;
+    for(var b=0;b<nBins;b++){
+      var bx=toX(xLo+b*binW2),bw=toX(xLo+(b+1)*binW2)-bx;
+      var bh=bins[b]*histScale;
+      ctx.fillRect(bx,base-12-bh,bw,bh);
+      ctx.strokeRect(bx,base-12-bh,bw,bh);
+    }
+
+    // Reference pₜ curve (dashed black)
+    var localDScale=histH/(maxD||1)*0.7;
+    ctx.strokeStyle='#333';ctx.lineWidth=0.8+0.7*dimAlpha;ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    for(var i=0;i<=200;i++){
+      var x=xLo+i/200*(xHi-xLo);
+      var py=base-12-pt(x,curT)*localDScale;
+      i?ctx.lineTo(toX(x),py):ctx.moveTo(toX(x),py);
+    }
+    ctx.stroke();ctx.setLineDash([]);
+
+    // Particles
+    ctx.globalAlpha=dimAlpha*0.35;ctx.fillStyle=st.col;
+    for(var i=0;i<particles.length;i++){
+      var px=toX(particles[i]);
+      if(px<pad.l-3||px>CW-pad.r+3)continue;
+      ctx.beginPath();ctx.arc(px,base-8+((i%3)-1)*3,1.8,0,2*Math.PI);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    // Strip header: label + equation
+    ctx.globalAlpha=0.2+0.8*dimAlpha;
+    ctx.fillStyle=st.col;ctx.font="bold 11px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+    ctx.fillText(st.label,pad.l+4,st.top+14);
+    var eqGray=Math.round(85+170*(1-dimAlpha));
+    ctx.fillStyle='rgb('+eqGray+','+eqGray+','+eqGray+')';ctx.font="9px 'IBM Plex Mono',monospace";
+    ctx.fillText(st.eq,pad.l+4,st.top+26);
+
+    // Direction (right-aligned)
+    ctx.textAlign='right';
+    ctx.fillStyle=st.col;ctx.font="bold 10px 'IBM Plex Mono',monospace";
+    ctx.fillText(st.dir,CW-pad.r-4,st.top+14);
+
+    // "= pₜ" label on right showing match (fade with alpha)
+    if(dimAlpha>0.45){
+      ctx.fillStyle='rgba(51,51,51,'+(dimAlpha).toFixed(2)+')';ctx.font="bold 8px 'IBM Plex Mono',monospace";ctx.textAlign='right';
+      ctx.fillText('histogram \u2248 p\u209C \u2714',CW-pad.r-4,st.top+26);
+    }
+
+    ctx.globalAlpha=1;
+
+    // Separator
+    if(st.top>pad.t){
+      ctx.strokeStyle='#e8e4df';ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(pad.l,st.top-gap/2);ctx.lineTo(CW-pad.r,st.top-gap/2);ctx.stroke();
+    }
+  });
+
+  // PF-ODE bidirectional annotation
+  ctx.globalAlpha=odeAlpha;
+  var odeTop=strip3Top;
+  ctx.fillStyle='#1e3a5f88';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+  ctx.fillText('\u2190\u2192 works both directions! (deterministic, reversible)',pad.l+4,odeTop+36);
+  ctx.globalAlpha=1;
+
+  // Axis labels at bottom
+  ctx.fillStyle='#aaa';ctx.font="8px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+  [-4,-2,0,2,4].forEach(function(x){ctx.fillText(x,toX(x),CH-pad.b+4);});
+
+  // Update direction badge
+  var badge=document.getElementById('dir-badge');
+  if(slideDir>0){
+    badge.textContent='\u2192 t increasing (noising)';
+    badge.style.background='#2d6a4f18';badge.style.color='#2d6a4f';
+  } else if(slideDir<0){
+    badge.textContent='\u2190 t decreasing (denoising)';
+    badge.style.background='#c2361618';badge.style.color='#c23616';
+  } else {
+    badge.textContent='drag slider';
+    badge.style.background='#eee';badge.style.color='#888';
+  }
+
+  // Note
+  var el=document.getElementById('note');
+  if(slideDir>0){
+    el.innerHTML='<strong>Sliding rightward (t\u2191, noising):</strong> The <span style="color:#2d6a4f"><strong>Forward Process</strong></span> and the <span style="color:#1e3a5f"><strong>PF-ODE</strong></span> (solved forward) are active &mdash; both add noise, both follow p\u209C. The <span style="color:#c23616">Reverse SDE</span> is dimmed (it only runs the other way). The PF-ODE produces the same density as the stochastic forward SDE, but via <em>deterministic</em> trajectories.';
+  } else if(slideDir<0){
+    el.innerHTML='<strong>Sliding leftward (t\u2193, denoising):</strong> The <span style="color:#c23616"><strong>Reverse SDE</strong></span> and the <span style="color:#1e3a5f"><strong>PF-ODE</strong></span> (solved backward) are active &mdash; both remove noise using the score \u2207log p\u209C, both follow p\u209C. The <span style="color:#2d6a4f">Forward Process</span> is dimmed (it only adds noise). The PF-ODE has no stochastic term (the \u00BD factor replaces the noise), yet matches the same marginals.';
+  } else {
+    el.innerHTML='<strong>Drag the slider</strong> to see which dynamics are active. Slide <strong>rightward</strong>: forward process + forward PF-ODE light up (data\u2192noise). Slide <strong>leftward</strong>: reverse SDE + backward PF-ODE light up (noise\u2192data). The PF-ODE is the only dynamics that works <em>both ways</em> &mdash; it is deterministic and time-reversible.';
+  }
+}
+
+// Track direction with momentum (smooth, resists jitter)
+document.getElementById('t-slider').oninput=function(e){
+  curT=parseFloat(e.target.value);
+  document.getElementById('t-val').textContent=curT.toFixed(2);
+
+  var delta=curT-prevT;
+  prevT=curT;
+
+  // Update momentum: exponential moving average of velocity
+  momentum=momentum*MOMENTUM_DECAY+delta*(1-MOMENTUM_DECAY)*50;
+
+  // Only change direction when momentum is clearly in one direction
+  var newDir;
+  if(momentum>MOMENTUM_THRESH) newDir=1;
+  else if(momentum<-MOMENTUM_THRESH) newDir=-1;
+  else newDir=slideDir; // keep current direction during ambiguity
+
+  // Sticky: require stronger momentum to FLIP direction than to maintain it
+  if(newDir!==slideDir && newDir!==0){
+    // Need extra momentum to flip
+    if(Math.abs(momentum)>MOMENTUM_THRESH*2) slideDir=newDir;
+  } else {
+    slideDir=newDir;
+  }
+
+  // Go idle after sustained pause
+  clearTimeout(idleTimer);
+  idleTimer=setTimeout(function(){
+    momentum=0;slideDir=0;draw();
+  },600);
+
+  draw();
+};
+
+draw();
+</script>
+</body></html>

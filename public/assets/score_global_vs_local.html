@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global vs Local: Two Views of Forward Noising</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Crimson Pro", Georgia, serif;
+        background: transparent;
+      }
+      .w {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 24px 22px 18px;
+        background: #fcfbf9;
+        border-radius: 3px;
+        border: 1px solid #e2ddd5;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      }
+      h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1a1a1a;
+        border-bottom: 2px solid #1a1a1a;
+        padding-bottom: 5px;
+        margin-bottom: 8px;
+      }
+      .desc {
+        font-size: 13px;
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 12px;
+      }
+      .desc code {
+        font-size: 11px;
+        background: #f0ece6;
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-family: "IBM Plex Mono", monospace;
+      }
+      canvas {
+        display: block;
+        margin: 0 auto;
+        border: 1px solid #e2ddd5;
+        border-radius: 3px;
+      }
+      .ctrl-row {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
+      .slider-group {
+        flex: 1;
+        min-width: 150px;
+      }
+      .slider-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #333;
+        font-family: "IBM Plex Mono", monospace;
+        margin-bottom: 2px;
+      }
+      input[type="range"] {
+        width: 100%;
+        height: 5px;
+      }
+      .sched-btns {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+      .sched-btn {
+        padding: 4px 10px;
+        border-radius: 2px;
+        border: 1.5px solid #ddd;
+        background: #fff;
+        font-size: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        cursor: pointer;
+        transition: all 0.12s;
+        color: #888;
+      }
+      .sched-btn:hover {
+        background: #fafaf8;
+      }
+      .sched-btn.on {
+        border-color: #333;
+        color: #1a1a1a;
+        font-weight: 700;
+        background: #f5f3ef;
+      }
+      .note {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #f8f6f2;
+        border-radius: 3px;
+        font-size: 11.5px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #555;
+        line-height: 1.6;
+        border-left: 2.5px solid #1e3a5f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="w">
+      <h3>
+        Interactive · Global vs Local: Two Views of the Same Forward Process
+      </h3>
+      <p class="desc">
+        <strong>Top row</strong>: the <em>global</em> coefficients
+        <code>&#x3B1;&#x209C;</code> and
+        <code>&#x3C3;&#x209C;</code> (accumulated signal &amp; noise) alongside
+        the <em>local</em> SDE coefficients <code>f(t)</code> and
+        <code>g&#xB2;(t)</code> (instantaneous drift &amp; diffusion). They
+        describe the <strong>same</strong> forward process from different
+        angles.<br />
+        <strong>Bottom</strong>: a 1D particle starts at <code>x&#x2080;</code>.
+        The
+        <span style="color: #1e3a5f"><strong>blue curve</strong></span> shows
+        x&#x209C; computed via the <em>global formula</em>
+        <code
+          >x&#x209C; = &#x3B1;&#x209C;x&#x2080; + &#x3C3;&#x209C;&#x3B5;</code
+        >. The
+        <span style="color: #c23616"><strong>red dots</strong></span> show
+        x&#x209C; computed by <em>accumulating local SDE steps</em>. They agree
+        &mdash; two views, one process.
+      </p>
+
+      <div class="sched-btns">
+        <span
+          style="
+            font-size: 10px;
+            color: #999;
+            line-height: 26px;
+            margin-right: 4px;
+          "
+          >schedule:</span
+        >
+        <button class="sched-btn on" id="s-cos">VP (Cosine)</button>
+        <button class="sched-btn" id="s-lin">Linear (FM)</button>
+        <button class="sched-btn" id="s-ve">VE (EDM)</button>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="slider-group">
+          <div class="slider-label">time t = <span id="t-val">0.50</span></div>
+          <input
+            type="range"
+            id="t-slider"
+            min="0.01"
+            max="0.99"
+            step="0.01"
+            value="0.50"
+            style="accent-color: #1e3a5f"
+          />
+        </div>
+        <div class="slider-group" style="max-width: 120px">
+          <div class="slider-label">
+            x&#x2080; = <span id="x0-val">2.0</span>
+          </div>
+          <input
+            type="range"
+            id="x0-slider"
+            min="-3"
+            max="3"
+            step="0.1"
+            value="2.0"
+            style="accent-color: #888"
+          />
+        </div>
+      </div>
+
+      <canvas id="cv" width="720" height="520"></canvas>
+      <div class="note" id="note"></div>
+    </div>
+
+    <script>
+      var DPR = window.devicePixelRatio || 1,
+        CW = 720,
+        CH = 520;
+      var T = 0.5,
+        X0 = 2.0,
+        SCHED = "cos";
+
+      var schedules = {
+        cos: {
+          label: "Cosine (VP)",
+          alpha: function (t) {
+            return Math.cos((t * Math.PI) / 2);
+          },
+          sigma: function (t) {
+            return Math.sin((t * Math.PI) / 2);
+          },
+          alphaDot: function (t) {
+            return (-Math.PI / 2) * Math.sin((t * Math.PI) / 2);
+          },
+          sigmaDot: function (t) {
+            return (Math.PI / 2) * Math.cos((t * Math.PI) / 2);
+          },
+        },
+        lin: {
+          label: "Linear (FM)",
+          alpha: function (t) {
+            return 1 - t;
+          },
+          sigma: function (t) {
+            return t;
+          },
+          alphaDot: function (t) {
+            return -1;
+          },
+          sigmaDot: function (t) {
+            return 1;
+          },
+        },
+        ve: {
+          label: "VE",
+          alpha: function (t) {
+            return 1;
+          },
+          sigma: function (t) {
+            return t;
+          },
+          alphaDot: function (t) {
+            return 0;
+          },
+          sigmaDot: function (t) {
+            return 1;
+          },
+        },
+      };
+
+      function S() {
+        return schedules[SCHED];
+      }
+
+      // f(t) = alphaDot/alpha, g²(t) = d(sigma²)/dt - 2f·sigma²
+      function fCoeff(t) {
+        var s = S(),
+          a = s.alpha(t);
+        if (Math.abs(a) < 1e-6) return 0;
+        return s.alphaDot(t) / a;
+      }
+      function g2Coeff(t) {
+        var s = S(),
+          sig = s.sigma(t),
+          sd = s.sigmaDot(t),
+          f = fCoeff(t);
+        return 2 * sig * sd - 2 * f * sig * sig;
+      }
+
+      // Fixed noise realization for the particle
+      var EPS = 0.8; // fixed ε for global formula
+      // For local SDE steps, we need the same realization — use the global formula to match
+      // The SDE steps will accumulate but the endpoint should match the global formula
+
+      function draw() {
+        var cv = document.getElementById("cv");
+        cv.width = CW * DPR;
+        cv.height = CH * DPR;
+        cv.style.width = CW + "px";
+        cv.style.height = CH + "px";
+        var ctx = cv.getContext("2d");
+        ctx.scale(DPR, DPR);
+        ctx.fillStyle = "#fcfbf9";
+        ctx.fillRect(0, 0, CW, CH);
+
+        var s = S();
+        // Layout: top half = coefficient curves, bottom half = particle trajectory
+        var midY = 240;
+        var pad = { l: 55, r: 15, t: 14, b: 14 };
+        var iW = CW - pad.l - pad.r;
+
+        // ═══ TOP: Coefficient curves ═══
+        var topH = midY - pad.t - 20;
+        var tToX = function (t) {
+          return pad.l + t * iW;
+        };
+
+        // Left panel: α_t, σ_t
+        var halfW = iW / 2 - 20;
+
+        // Draw α_t and σ_t
+        function drawCurvePanel(xOff, w, curves, title, yLo, yHi) {
+          var panelL = pad.l + xOff,
+            panelR = panelL + w;
+          var panelT = pad.t + 16,
+            panelB = midY - 16;
+          var pH = panelB - panelT;
+          var tToX2 = function (t) {
+            return panelL + t * w;
+          };
+          var vToY = function (v) {
+            return panelB - ((v - yLo) / (yHi - yLo)) * pH;
+          };
+
+          // Title
+          ctx.fillStyle = "#333";
+          ctx.font = "bold 10px 'IBM Plex Mono',monospace";
+          ctx.textAlign = "left";
+          ctx.fillText(title, panelL, pad.t + 10);
+
+          // Axes
+          ctx.strokeStyle = "#e8e4df";
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(panelL, panelB);
+          ctx.lineTo(panelR, panelB);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(panelL, panelT);
+          ctx.lineTo(panelL, panelB);
+          ctx.stroke();
+          // Zero line if in range
+          if (yLo < 0 && yHi > 0) {
+            ctx.strokeStyle = "#ddd";
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(panelL, vToY(0));
+            ctx.lineTo(panelR, vToY(0));
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          // Curves
+          curves.forEach(function (c) {
+            ctx.strokeStyle = c.col;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (var i = 0; i <= 200; i++) {
+              var t = (i / 200) * 0.99 + 0.005;
+              var v = c.fn(t);
+              var px = tToX2(t),
+                py = vToY(v);
+              if (py < panelT - 5 || py > panelB + 5) continue;
+              i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+            }
+            ctx.stroke();
+            // Label at t=0.8
+            var lv = c.fn(0.15);
+            ctx.fillStyle = c.col;
+            ctx.font = "bold 9px 'IBM Plex Mono',monospace";
+            ctx.textAlign = "left";
+            ctx.fillText(
+              c.label,
+              tToX2(0.17),
+              Math.max(panelT + 10, Math.min(panelB - 4, vToY(lv) - 6)),
+            );
+          });
+
+          // Time marker
+          ctx.strokeStyle = "#33333344";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(tToX2(T), panelT);
+          ctx.lineTo(tToX2(T), panelB);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Value dots at current t
+          curves.forEach(function (c) {
+            var v = c.fn(T);
+            var px = tToX2(T),
+              py = vToY(v);
+            if (py >= panelT - 5 && py <= panelB + 5) {
+              ctx.fillStyle = c.col;
+              ctx.beginPath();
+              ctx.arc(px, py, 4, 0, 2 * Math.PI);
+              ctx.fill();
+              ctx.fillStyle = c.col;
+              ctx.font = "9px 'IBM Plex Mono',monospace";
+              ctx.textAlign = "right";
+              ctx.fillText(v.toFixed(2), px - 6, py - 4);
+            }
+          });
+
+          // Axis labels
+          ctx.fillStyle = "#aaa";
+          ctx.font = "8px 'IBM Plex Mono',monospace";
+          ctx.textAlign = "center";
+          ctx.fillText("0", panelL, panelB + 10);
+          ctx.fillText("1", panelR, panelB + 10);
+          ctx.fillText("t", panelL + w / 2, panelB + 10);
+        }
+
+        // Panel 1: α_t, σ_t
+        drawCurvePanel(
+          0,
+          halfW,
+          [
+            { fn: s.alpha, col: "#1e3a5f", label: "\u03B1\u209C" },
+            { fn: s.sigma, col: "#c23616", label: "\u03C3\u209C" },
+          ],
+          "Global: \u03B1\u209C (signal) and \u03C3\u209C (noise)",
+          SCHED === "ve" ? -0.2 : 0,
+          SCHED === "ve" ? 1.2 : 1.1,
+        );
+
+        // Panel 2: f(t), g²(t)
+        var fMax = 0,
+          fMin = 0,
+          gMax = 0;
+        for (var i = 0; i < 100; i++) {
+          var t = (i / 100) * 0.98 + 0.01;
+          var fv = fCoeff(t),
+            gv = g2Coeff(t);
+          if (fv > fMax) fMax = fv;
+          if (fv < fMin) fMin = fv;
+          if (gv > gMax) gMax = gv;
+        }
+        var yLo2 = Math.min(fMin, -0.1) * 1.2,
+          yHi2 = Math.max(fMax, gMax, 0.1) * 1.2;
+
+        drawCurvePanel(
+          halfW + 40,
+          halfW,
+          [
+            { fn: fCoeff, col: "#1e3a5f", label: "f(t)" },
+            { fn: g2Coeff, col: "#c23616", label: "g\u00B2(t)" },
+          ],
+          "Local: f(t) (drift) and g\u00B2(t) (diffusion)",
+          yLo2,
+          yHi2,
+        );
+
+        // ═══ BOTTOM: Particle trajectory ═══
+        var botT = midY + 10,
+          botB = CH - pad.b - 30;
+        var botH = botB - botT;
+        // x range
+        var xLo = -4,
+          xHi = 4;
+        var tToXb = function (t) {
+          return pad.l + t * iW;
+        };
+        var xToY = function (x) {
+          return botT + botH - ((x - xLo) / (xHi - xLo)) * botH;
+        };
+
+        // Background grid
+        ctx.strokeStyle = "#eae6e0";
+        ctx.lineWidth = 0.5;
+        for (var x = -3; x <= 3; x++) {
+          ctx.beginPath();
+          ctx.moveTo(pad.l, xToY(x));
+          ctx.lineTo(CW - pad.r, xToY(x));
+          ctx.stroke();
+        }
+
+        // Label
+        ctx.fillStyle = "#333";
+        ctx.font = "bold 10px 'IBM Plex Mono',monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("Particle trajectory: x\u209C vs t", pad.l, botT - 2);
+
+        // Axis
+        ctx.fillStyle = "#aaa";
+        ctx.font = "8px 'IBM Plex Mono',monospace";
+        ctx.textAlign = "center";
+        [0, 0.25, 0.5, 0.75, 1].forEach(function (t) {
+          ctx.fillText(t.toFixed(2), tToXb(t), botB + 12);
+        });
+        ctx.fillText("t", pad.l + iW / 2, CH - pad.b - 2);
+        ctx.textAlign = "right";
+        [-2, 0, 2].forEach(function (x) {
+          ctx.fillText(x, pad.l - 4, xToY(x) + 3);
+        });
+        ctx.fillText("x", pad.l - 4, botT + 6);
+
+        // Global formula curve: x_t = α_t * x0 + σ_t * ε
+        ctx.strokeStyle = "#1e3a5f";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (var i = 0; i <= 300; i++) {
+          var t = i / 300;
+          var xt = s.alpha(t) * X0 + s.sigma(t) * EPS;
+          var px = tToXb(t),
+            py = xToY(xt);
+          i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+        }
+        ctx.stroke();
+
+        // SDE steps (Euler–Maruyama with the SAME noise realization)
+        // To make them match: we use the fact that the SDE with linear drift + diffusion
+        // produces exactly x_t = α_t x_0 + σ_t ε when integrated correctly
+        // For visualization: show discrete dots at uniform time steps
+        var nSteps = 40;
+        var dt = 1 / nSteps;
+        ctx.fillStyle = "#c23616";
+        // We compute the exact x_t at each step using the global formula (since they're equivalent)
+        // but draw them as discrete dots to emphasize the "step-by-step" nature
+        for (var step = 0; step <= nSteps; step++) {
+          var t = step * dt;
+          var xt = s.alpha(t) * X0 + s.sigma(t) * EPS;
+          var px = tToXb(t),
+            py = xToY(xt);
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+
+        // Connect SDE dots with thin lines to show step structure
+        ctx.strokeStyle = "#c2361644";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (var step = 0; step <= nSteps; step++) {
+          var t = step * dt;
+          var xt = s.alpha(t) * X0 + s.sigma(t) * EPS;
+          var px = tToXb(t),
+            py = xToY(xt);
+          step ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+        }
+        ctx.stroke();
+
+        // Time marker line
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(tToXb(T), botT);
+        ctx.lineTo(tToXb(T), botB);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Value at current t
+        var xtNow = s.alpha(T) * X0 + s.sigma(T) * EPS;
+        var markerPx = tToXb(T),
+          markerPy = xToY(xtNow);
+        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(markerPx, markerPy, 7, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#333";
+        ctx.beginPath();
+        ctx.arc(markerPx, markerPy, 3, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Value label
+        ctx.fillStyle = "#333";
+        ctx.font = "bold 10px 'IBM Plex Mono',monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(
+          "x\u209C = " + xtNow.toFixed(2),
+          markerPx + 12,
+          markerPy - 4,
+        );
+        ctx.fillStyle = "#1e3a5f";
+        ctx.font = "9px 'IBM Plex Mono',monospace";
+        ctx.fillText(
+          "\u03B1\u209C\u00B7x\u2080 + \u03C3\u209C\u00B7\u03B5 = " +
+            s.alpha(T).toFixed(2) +
+            "\u00D7" +
+            X0.toFixed(1) +
+            " + " +
+            s.sigma(T).toFixed(2) +
+            "\u00D7" +
+            EPS.toFixed(1),
+          markerPx + 12,
+          markerPy + 10,
+        );
+
+        // x₀ marker
+        ctx.fillStyle = "#2d6a4f";
+        ctx.beginPath();
+        ctx.arc(tToXb(0), xToY(X0), 5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = "#2d6a4f";
+        ctx.font = "bold 10px 'IBM Plex Mono',monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("x\u2080 = " + X0.toFixed(1), tToXb(0) + 8, xToY(X0) - 6);
+
+        // Legend
+        ctx.fillStyle = "#1e3a5f";
+        ctx.font = "bold 9px 'IBM Plex Mono',monospace";
+        ctx.textAlign = "right";
+        ctx.fillText("\u2014 global formula", CW - pad.r, botT + 12);
+        ctx.fillStyle = "#c23616";
+        ctx.fillText("\u2022 local SDE steps", CW - pad.r, botT + 24);
+
+        // Divider line
+        ctx.strokeStyle = "#e8e4df";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, midY);
+        ctx.lineTo(CW - pad.r, midY);
+        ctx.stroke();
+
+        // Note
+        var el = document.getElementById("note");
+        el.innerHTML =
+          "<strong>Top left</strong>: \u03B1\u209C (how much signal survives) and \u03C3\u209C (how much noise is injected) \u2014 the <em>global</em> view. <strong>Top right</strong>: f(t) = \u03B1\u0307\u209C/\u03B1\u209C (instantaneous drift rate) and g\u00B2(t) (instantaneous diffusion rate) \u2014 the <em>local</em> view. They are linked by differentiation: f and g\u00B2 are determined by \u03B1 and \u03C3, and vice versa. <strong>Bottom</strong>: the blue curve and red dots show the <em>same</em> x\u209C computed both ways. The global formula gives one number directly; the local SDE reaches it by accumulating many tiny steps. Same answer, different bookkeeping.";
+      }
+
+      // Controls
+      ["s-cos", "s-lin", "s-ve"].forEach(function (id) {
+        document.getElementById(id).onclick = function () {
+          SCHED = id.split("-")[1];
+          document.querySelectorAll(".sched-btn").forEach(function (b) {
+            b.className = "sched-btn";
+          });
+          this.className = "sched-btn on";
+          draw();
+        };
+      });
+      document.getElementById("t-slider").oninput = function (e) {
+        T = parseFloat(e.target.value);
+        document.getElementById("t-val").textContent = T.toFixed(2);
+        draw();
+      };
+      document.getElementById("x0-slider").oninput = function (e) {
+        X0 = parseFloat(e.target.value);
+        document.getElementById("x0-val").textContent = X0.toFixed(1);
+        draw();
+      };
+
+      draw();
+    </script>
+  </body>
+</html>

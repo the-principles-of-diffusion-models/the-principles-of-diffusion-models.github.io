@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Conditional Trick</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Crimson Pro", Georgia, serif;
+        background: transparent;
+      }
+      .w {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 24px 22px 18px;
+        background: #fcfbf9;
+        border-radius: 3px;
+        border: 1px solid #e2ddd5;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      }
+      h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1a1a1a;
+        border-bottom: 2px solid #1a1a1a;
+        padding-bottom: 5px;
+        margin-bottom: 8px;
+      }
+      .desc {
+        font-size: 13px;
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 12px;
+      }
+      .desc code {
+        font-size: 11px;
+        background: #f0ece6;
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-family: "IBM Plex Mono", monospace;
+      }
+      canvas {
+        display: block;
+        margin: 0 auto;
+        border: 1px solid #e2ddd5;
+        border-radius: 3px;
+        cursor: grab;
+      }
+      canvas:active {
+        cursor: grabbing;
+      }
+      .ctrl-row {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
+      .slider-group {
+        flex: 1;
+        min-width: 140px;
+      }
+      .slider-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #333;
+        font-family: "IBM Plex Mono", monospace;
+        margin-bottom: 2px;
+      }
+      input[type="range"] {
+        width: 100%;
+        height: 5px;
+      }
+      .note {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #f8f6f2;
+        border-radius: 3px;
+        font-size: 11.5px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #555;
+        line-height: 1.6;
+        border-left: 2.5px solid #c23616;
+      }
+      .cond-btns {
+        display: flex;
+        gap: 5px;
+        flex-wrap: nowrap;
+        margin-bottom: 8px;
+        overflow-x: auto;
+      }
+      .cond-btn {
+        padding: 5px 8px;
+        border-radius: 2px;
+        border: 1.5px solid #ddd;
+        background: #fff;
+        font-size: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        cursor: pointer;
+        transition: all 0.12s;
+        line-height: 1.3;
+        flex-shrink: 0;
+      }
+      .cond-btn:hover {
+        background: #fafaf8;
+      }
+      .cond-btn.on {
+        font-weight: 700;
+        border-width: 2px;
+      }
+      .cond-btn .sub {
+        font-size: 8.5px;
+        font-weight: 400;
+        display: block;
+        color: #999;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="w">
+      <h3>Interactive · The Conditional Trick</h3>
+      <p class="desc">
+        Given noisy <code>x&#x209C;</code> (white dot), the network must guess
+        which clean <code>x&#x2080;</code> produced it. But many sources are
+        plausible &mdash; each colored <strong>&times;</strong> is a data mode
+        with its own Gaussian (circle). The <em>small dots</em> are samples from
+        the posterior. <strong>Drag x&#x209C;</strong> and toggle conditioning
+        to see the trick.
+      </p>
+
+      <div class="ctrl-row">
+        <div class="slider-group">
+          <div class="slider-label">
+            noise level t = <span id="t-val">0.40</span>
+            <span style="font-weight: 400; color: #999"
+              >(low = little noise, high = lots)</span
+            >
+          </div>
+          <input
+            type="range"
+            id="t-slider"
+            min="0.08"
+            max="0.92"
+            step="0.01"
+            value="0.40"
+            style="accent-color: #c23616"
+          />
+        </div>
+      </div>
+
+      <div class="cond-btns">
+        <button class="cond-btn on" id="btn-all" style="border-color: #c23616">
+          Marginal p(x&#x2080; | x&#x209C;)<span class="sub"
+            >all sources &mdash; HARD</span
+          >
+        </button>
+        <button
+          class="cond-btn"
+          id="btn-m0"
+          style="border-color: #8e44ad; color: #8e44ad"
+        >
+          Condition on x&#x2080;<span class="sub"
+            >from mode 1 &mdash; EASY</span
+          >
+        </button>
+        <button
+          class="cond-btn"
+          id="btn-m1"
+          style="border-color: #1e3a5f; color: #1e3a5f"
+        >
+          Condition on x&#x2080;<span class="sub"
+            >from mode 2 &mdash; EASY</span
+          >
+        </button>
+        <button
+          class="cond-btn"
+          id="btn-m2"
+          style="border-color: #c97a2e; color: #c97a2e"
+        >
+          Condition on x&#x2080;<span class="sub"
+            >from mode 3 &mdash; EASY</span
+          >
+        </button>
+      </div>
+
+      <canvas id="cv1" width="680" height="500"></canvas>
+      <div class="note" id="note1"></div>
+    </div>
+
+    <script>
+      var DPR = window.devicePixelRatio || 1;
+      var T = 0.4,
+        condMode = -1;
+      // Mode 1=purple, Mode 2=blue, Mode 3=amber (red reserved for HARD label)
+      var modes = [
+        { x: -2.2, y: 1.5, col: "#8e44ad" },
+        { x: 2.0, y: 0.8, col: "#1e3a5f" },
+        { x: 0, y: -2.0, col: "#c97a2e" },
+      ];
+      var modeW = [0.35, 0.35, 0.3];
+      var xt1 = { x: 0.3, y: 0.2 };
+      var lo = -4.5,
+        hi = 4.5;
+
+      var _seed = 1;
+      function srand(s) {
+        _seed = s;
+      }
+      function rand() {
+        _seed = (_seed * 1664525 + 1013904223) & 0x7fffffff;
+        return _seed / 0x7fffffff;
+      }
+      function randn() {
+        var u1 = rand() + 1e-10,
+          u2 = rand();
+        return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      }
+      function gauss2d(x, y, mx, my, s) {
+        return (
+          Math.exp(
+            (-0.5 * ((x - mx) * (x - mx) + (y - my) * (y - my))) / (s * s),
+          ) /
+          (2 * Math.PI * s * s)
+        );
+      }
+
+      function postWeights(xtx, xty, t) {
+        var sig = Math.max(t, 0.01),
+          al = 1 - t,
+          s2 = sig * sig;
+        var lws = modes.map(function (m, i) {
+          var dx = xtx - al * m.x,
+            dy = xty - al * m.y;
+          return Math.log(modeW[i]) - (0.5 * (dx * dx + dy * dy)) / s2;
+        });
+        var mx = Math.max.apply(null, lws);
+        var ws = lws.map(function (lw) {
+          return Math.exp(lw - mx);
+        });
+        var S = ws.reduce(function (a, b) {
+          return a + b;
+        }, 0);
+        return ws.map(function (w) {
+          return w / S;
+        });
+      }
+
+      function draw1() {
+        var cv = document.getElementById("cv1");
+        var W = 680,
+          H = 500;
+        cv.width = W * DPR;
+        cv.height = H * DPR;
+        cv.style.width = W + "px";
+        cv.style.height = H + "px";
+        var ctx = cv.getContext("2d");
+        ctx.scale(DPR, DPR);
+        ctx.fillStyle = "#fcfbf9";
+        ctx.fillRect(0, 0, W, H);
+
+        var pad = { l: 10, r: 10, t: 10, b: 10 },
+          iW = W - pad.l - pad.r,
+          iH = H - pad.t - pad.b;
+        var toX = function (v) {
+          return pad.l + ((v - lo) / (hi - lo)) * iW;
+        };
+        var toY = function (v) {
+          return pad.t + iH - ((v - lo) / (hi - lo)) * iH;
+        };
+
+        var sig = Math.max(T, 0.01),
+          al = 1 - T;
+        var weights = postWeights(xt1.x, xt1.y, T);
+        var showAll = condMode === -1;
+        var easyCol = condMode >= 0 ? modes[condMode].col : "#2d6a4f";
+
+        // Density heatmap
+        var res = 80,
+          pw2 = iW / res,
+          ph2 = iH / res;
+        for (var py = 0; py < res; py++) {
+          for (var px = 0; px < res; px++) {
+            var xv = lo + ((px + 0.5) / res) * (hi - lo),
+              yv = lo + (1 - (py + 0.5) / res) * (hi - lo);
+            var rr = 0,
+              gg = 0,
+              bb = 0,
+              totalA = 0;
+            if (showAll) {
+              for (var k = 0; k < modes.length; k++) {
+                var d =
+                  weights[k] *
+                  gauss2d(xv, yv, modes[k].x, modes[k].y, sig * 0.7);
+                var cr = parseInt(modes[k].col.slice(1, 3), 16),
+                  cg = parseInt(modes[k].col.slice(3, 5), 16),
+                  cb = parseInt(modes[k].col.slice(5, 7), 16);
+                rr += cr * d;
+                gg += cg * d;
+                bb += cb * d;
+                totalA += d;
+              }
+            } else {
+              var cm = modes[condMode];
+              var d = gauss2d(xv, yv, cm.x, cm.y, sig * 0.7);
+              var cr = parseInt(cm.col.slice(1, 3), 16),
+                cg = parseInt(cm.col.slice(3, 5), 16),
+                cb = parseInt(cm.col.slice(5, 7), 16);
+              rr = cr * d;
+              gg = cg * d;
+              bb = cb * d;
+              totalA = d;
+            }
+            if (totalA > 0) {
+              rr /= totalA;
+              gg /= totalA;
+              bb /= totalA;
+            }
+            var a = Math.pow(Math.min(totalA * 800, 1), 0.5) * 0.35;
+            if (a > 0.005) {
+              ctx.fillStyle =
+                "rgba(" +
+                Math.round(rr) +
+                "," +
+                Math.round(gg) +
+                "," +
+                Math.round(bb) +
+                "," +
+                a.toFixed(3) +
+                ")";
+              ctx.fillRect(
+                pad.l + px * pw2,
+                pad.t + py * ph2,
+                pw2 + 0.5,
+                ph2 + 0.5,
+              );
+            }
+          }
+        }
+
+        // Grid
+        ctx.strokeStyle = "rgba(0,0,0,0.04)";
+        ctx.lineWidth = 0.5;
+        for (var v = Math.ceil(lo); v <= hi; v++) {
+          ctx.beginPath();
+          ctx.moveTo(toX(v), pad.t);
+          ctx.lineTo(toX(v), pad.t + iH);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(pad.l, toY(v));
+          ctx.lineTo(pad.l + iW, toY(v));
+          ctx.stroke();
+        }
+
+        // Scatter dots
+        srand(42);
+        var nSamp = 80;
+        if (showAll) {
+          for (var i = 0; i < nSamp; i++) {
+            var r = rand(),
+              cum = 0,
+              chosen = 0;
+            for (var k = 0; k < modes.length; k++) {
+              cum += weights[k];
+              if (r < cum) {
+                chosen = k;
+                break;
+              }
+            }
+            var sx = modes[chosen].x + randn() * sig * 0.7,
+              sy = modes[chosen].y + randn() * sig * 0.7;
+            ctx.fillStyle = modes[chosen].col;
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(toX(sx), toY(sy), 2.5, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+        } else {
+          var cm = modes[condMode];
+          for (var i = 0; i < nSamp; i++) {
+            var sx = cm.x + randn() * sig * 0.7,
+              sy = cm.y + randn() * sig * 0.7;
+            ctx.fillStyle = cm.col;
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(toX(sx), toY(sy), 2.5, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+
+        // Mode markers and circles
+        modes.forEach(function (m, mi) {
+          var w = weights[mi],
+            isActive = showAll || condMode === mi;
+          var alpha = isActive ? (showAll ? 0.25 + w * 0.75 : 1) : 0.05;
+          ctx.globalAlpha = alpha;
+          var mpx = toX(m.x),
+            mpy = toY(m.y);
+          var r1 = ((sig * 0.7) / (hi - lo)) * iW;
+          ctx.strokeStyle = m.col;
+          ctx.lineWidth = isActive && !showAll ? 3 : 1.5;
+          ctx.beginPath();
+          ctx.arc(mpx, mpy, r1, 0, 2 * Math.PI);
+          ctx.stroke();
+          ctx.strokeStyle = m.col + "44";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(mpx, mpy, r1 * 2, 0, 2 * Math.PI);
+          ctx.stroke();
+          // x marker
+          ctx.strokeStyle = m.col;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(mpx - 7, mpy - 7);
+          ctx.lineTo(mpx + 7, mpy + 7);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(mpx + 7, mpy - 7);
+          ctx.lineTo(mpx - 7, mpy + 7);
+          ctx.stroke();
+          // Dashed line from xt
+          var xtPx = toX(xt1.x),
+            xtPy = toY(xt1.y);
+          ctx.strokeStyle = m.col;
+          ctx.lineWidth = Math.max(0.8, w * 4);
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          ctx.moveTo(xtPx, xtPy);
+          ctx.lineTo(mpx, mpy);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // Label
+          ctx.fillStyle = m.col;
+          ctx.font = "bold 11px 'IBM Plex Mono',monospace";
+          ctx.textAlign = "center";
+          if (showAll) {
+            ctx.fillText("mode " + (mi + 1), mpx, mpy + r1 + 18);
+            ctx.font = "9px 'IBM Plex Mono',monospace";
+            ctx.fillText("w = " + w.toFixed(2), mpx, mpy + r1 + 30);
+          } else if (condMode === mi) {
+            ctx.fillText("x\u2080 (known)", mpx, mpy + r1 + 18);
+            ctx.font = "9px 'IBM Plex Mono',monospace";
+            ctx.fillText(
+              "p(x\u209C\u208B\u2081 | x\u209C, x\u2080) = one Gaussian",
+              mpx,
+              mpy + r1 + 30,
+            );
+          }
+          ctx.globalAlpha = 1;
+        });
+
+        // E[x0|xt] gray dot (marginal mode only)
+        var ex0x = 0,
+          ex0y = 0;
+        for (var k = 0; k < modes.length; k++) {
+          ex0x += weights[k] * modes[k].x;
+          ex0y += weights[k] * modes[k].y;
+        }
+        if (showAll) {
+          var epx = toX(ex0x),
+            epy = toY(ex0y);
+          ctx.fillStyle = "#888";
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(epx, epy, 6, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#555";
+          ctx.font = "bold 10px 'IBM Plex Mono',monospace";
+          ctx.textAlign = "left";
+          ctx.fillText("E[x\u2080 | x\u209C]", epx + 10, epy - 6);
+          ctx.fillStyle = "#999";
+          ctx.font = "9px 'IBM Plex Mono',monospace";
+          ctx.fillText("best single-point guess", epx + 10, epy + 6);
+          ctx.fillText("(falls between modes!)", epx + 10, epy + 18);
+        }
+
+        // xt marker
+        var xtPx = toX(xt1.x),
+          xtPy = toY(xt1.y);
+        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(xtPx, xtPy, 11, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#333";
+        ctx.beginPath();
+        ctx.arc(xtPx, xtPy, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = "#333";
+        ctx.font = "bold 12px 'IBM Plex Mono',monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("x\u209C (drag me)", xtPx + 16, xtPy + 5);
+
+        // Status label
+        if (showAll) {
+          ctx.fillStyle = "#c23616";
+          ctx.font = "bold 16px 'IBM Plex Mono',monospace";
+          ctx.textAlign = "left";
+          ctx.fillText("HARD: marginal is a mixture", 14, 28);
+          ctx.fillStyle = "#888";
+          ctx.font = "11px 'IBM Plex Mono',monospace";
+          ctx.fillText(
+            "p(x\u2080 | x\u209C) = weighted sum of all conditional Gaussians",
+            14,
+            44,
+          );
+        } else {
+          ctx.fillStyle = easyCol;
+          ctx.font = "bold 16px 'IBM Plex Mono',monospace";
+          ctx.textAlign = "left";
+          ctx.fillText("EASY: conditioned on known x\u2080", 14, 28);
+          ctx.fillStyle = "#888";
+          ctx.font = "11px 'IBM Plex Mono',monospace";
+          ctx.fillText(
+            "p(x\u209C\u208B\u2081 | x\u209C, x\u2080) = single Gaussian \u2014 easy regression target!",
+            14,
+            44,
+          );
+        }
+
+        // Note
+        var el = document.getElementById("note1");
+        if (showAll) {
+          var dominant = -1,
+            domW = 0;
+          weights.forEach(function (w, i) {
+            if (w > domW) {
+              domW = w;
+              dominant = i;
+            }
+          });
+          if (domW > 0.85) {
+            el.innerHTML =
+              'The posterior strongly favors <strong style="color:' +
+              modes[dominant].col +
+              '">mode ' +
+              (dominant + 1) +
+              "</strong> (w = " +
+              domW.toFixed(2) +
+              "). But E[x&#x2080;|x&#x209C;] (gray dot) still gets pulled by the minority mode. <strong>Drag x&#x209C; to the center</strong> to see a truly multimodal case where E[x&#x2080;|x&#x209C;] falls between all modes. Then <strong>click a &ldquo;Condition on&rdquo; button</strong> to see the fix.";
+          } else {
+            el.innerHTML =
+              "<strong>This is the hard case.</strong> Scatter dots spread across multiple modes &mdash; the marginal posterior is genuinely multimodal. The best single-point guess E[x&#x2080;|x&#x209C;] (gray dot) falls <em>between</em> the modes &mdash; a location that belongs to <em>no real data point</em>. An MSE-trained network is stuck predicting this bad average. <strong>Click &ldquo;Condition on&rdquo;</strong> to see how the conditional trick fixes this.";
+          }
+        } else {
+          el.innerHTML =
+            '<strong style="color:' +
+            easyCol +
+            '">Conditioned on x&#x2080;:</strong> the scatter collapses to <em>one tight cluster</em> around the known x&#x2080;. The reverse step p(x&#x209C;&#x208B;&#x2081; | x&#x209C;, x&#x2080;) is now a <em>single Gaussian</em> &mdash; no ambiguity, no multimodality. During training, each random (x&#x2080;, x&#x209C;) pair from the dataset gives one such easy target. Averaging the squared-error loss over many such pairs automatically recovers the optimal predictor for the full mixture. <strong>Click &ldquo;Marginal&rdquo;</strong> to feel the contrast again.';
+        }
+      }
+
+      // Controls
+      function updateBtns() {
+        ["btn-all", "btn-m0", "btn-m1", "btn-m2"].forEach(function (id, i) {
+          document.getElementById(id).className =
+            "cond-btn" +
+            ((condMode === -1 && i === 0) || (condMode === i - 1 && i > 0)
+              ? " on"
+              : "");
+        });
+      }
+      document.getElementById("btn-all").onclick = function () {
+        condMode = -1;
+        updateBtns();
+        draw1();
+      };
+      document.getElementById("btn-m0").onclick = function () {
+        condMode = 0;
+        updateBtns();
+        draw1();
+      };
+      document.getElementById("btn-m1").onclick = function () {
+        condMode = 1;
+        updateBtns();
+        draw1();
+      };
+      document.getElementById("btn-m2").onclick = function () {
+        condMode = 2;
+        updateBtns();
+        draw1();
+      };
+      document.getElementById("t-slider").oninput = function (e) {
+        T = parseFloat(e.target.value);
+        document.getElementById("t-val").textContent = T.toFixed(2);
+        draw1();
+      };
+
+      // Drag xt
+      var d1 = false,
+        cv1 = document.getElementById("cv1");
+      function mv1(e) {
+        var r = cv1.getBoundingClientRect(),
+          sx = 680 / r.width,
+          sy = 500 / r.height;
+        xt1.x = lo + (((e.clientX - r.left) * sx - 10) / 660) * (hi - lo);
+        xt1.y = lo + (1 - ((e.clientY - r.top) * sy - 10) / 480) * (hi - lo);
+        xt1.x = Math.max(lo + 0.3, Math.min(hi - 0.3, xt1.x));
+        xt1.y = Math.max(lo + 0.3, Math.min(hi - 0.3, xt1.y));
+        draw1();
+      }
+      cv1.addEventListener("mousedown", function (e) {
+        d1 = true;
+        mv1(e);
+      });
+      cv1.addEventListener("mousemove", function (e) {
+        if (d1) mv1(e);
+      });
+      cv1.addEventListener("mouseup", function () {
+        d1 = false;
+      });
+      cv1.addEventListener("mouseleave", function () {
+        d1 = false;
+      });
+      cv1.addEventListener("touchstart", function (e) {
+        d1 = true;
+        mv1(e.touches[0]);
+        e.preventDefault();
+      });
+      cv1.addEventListener("touchmove", function (e) {
+        if (d1) mv1(e.touches[0]);
+        e.preventDefault();
+      });
+      cv1.addEventListener("touchend", function () {
+        d1 = false;
+      });
+
+      draw1();
+    </script>
+  </body>
+</html>

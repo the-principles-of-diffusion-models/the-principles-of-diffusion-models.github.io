@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Euler vs Heun Solver</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:880px;margin:0 auto;padding:28px 24px 20px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.w h3{font-size:19px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:6px;margin-bottom:10px}
+.desc{font-size:13.5px;color:#555;line-height:1.65;margin-bottom:14px}
+.desc code{font-size:11.5px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.col-canvas{flex:1;min-width:440px}
+.col-ctrl{width:240px;min-width:200px}
+canvas{border:1px solid #e2ddd5;border-radius:3px}
+.ctrl-section{margin-bottom:14px}
+.ctrl-label{font-size:11px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:4px}
+.ctrl-sublabel{font-size:10px;color:#999;font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.legend-item{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:#555}
+.legend-swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-line{width:20px;height:0;border-top:2.5px solid;flex-shrink:0}
+.legend-line.dashed{border-top-style:dashed}
+label{display:flex;align-items:center;gap:6px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:#555;cursor:pointer;margin-bottom:4px}
+.btn{padding:5px 12px;border-radius:2px;border:1px solid #ddd;background:#fff;font-size:11px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .12s}
+.btn:hover{background:#f5f3ef}
+.btn.primary{border-color:#1e3a5f;color:#1e3a5f;font-weight:600}
+.btn.primary:hover{background:#1e3a5f11}
+input[type=range]{width:100%;accent-color:#1e3a5f;height:4px;margin-top:2px}
+.step-box{background:#fff;border:1px solid #e8e4df;border-radius:3px;padding:10px 12px;margin-top:10px}
+.step-formula{font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:#444;line-height:1.7;white-space:pre-wrap}
+.step-formula .euler-hl{color:#c23616;font-weight:600}
+.step-formula .heun-hl{color:#1e3a5f;font-weight:600}
+.step-formula .predict-hl{color:#1e3a5f;opacity:0.5}
+.error-box{margin-top:10px;padding:8px 10px;background:#f8f6f2;border-radius:3px;font-size:10.5px;font-family:'IBM Plex Mono',monospace;line-height:1.6;color:#555}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive · Euler vs Heun ODE Solver</h3>
+<p class="desc">
+  Same velocity field as above: data at <code>±μ</code>, noise <code>𝒩(0,1)</code>, marginal velocity in closed form.
+  Both solvers integrate <code>dx/dt = v(x,t)</code> backward from <code>t=1</code> (noise) to <code>t=0</code> (data).
+  <strong style="color:#c23616">Euler</strong> uses one velocity evaluation per step (= DDIM).
+  <strong style="color:#1e3a5f">Heun</strong> uses two evaluations with predict–correct (= DPM-Solver-2).
+  Use <strong>Step ▶</strong> to watch each method work, one step at a time.
+</p>
+
+<div class="row">
+  <div class="col-canvas">
+    <canvas id="cv" width="620" height="440"></canvas>
+  </div>
+  <div class="col-ctrl">
+    <div class="ctrl-section">
+      <div class="ctrl-label">Legend</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#bbb"></div> reference (exact)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#c23616"></div> Euler (1 NFE/step)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#1e3a5f"></div> Heun (2 NFE/step)</div>
+      <div class="legend-item"><div class="legend-line dashed" style="border-color:#1e3a5f;opacity:.4"></div> Heun predict (draft)</div>
+      <div class="legend-item"><div style="width:20px;height:8px;flex-shrink:0;display:flex;align-items:center"><svg width="16" height="8"><polygon points="8,0 16,4 8,8" fill="#6c3483" opacity="0.4"/></svg></div> velocity field</div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Steps: <span id="nsteps-val">4</span></div>
+      <input type="range" id="nsteps-slider" min="1" max="12" step="1" value="4">
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Start x₁ = <span id="x1-val">0.80</span></div>
+      <input type="range" id="x1-slider" min="-3" max="3" step="0.05" value="0.8">
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Data separation μ = <span id="mu-val">2.5</span></div>
+      <input type="range" id="mu-slider" min="0.5" max="4" step="0.1" value="2.5">
+    </div>
+
+    <div class="ctrl-section">
+      <label><input type="checkbox" id="show-field" checked style="accent-color:#6c3483"> velocity field</label>
+    </div>
+
+    <div class="ctrl-section" style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn primary" id="btn-step">Step ▶</button>
+      <button class="btn" id="btn-all">Show all</button>
+      <button class="btn" id="btn-reset">↺ Reset</button>
+    </div>
+
+    <div id="step-info" class="step-box" style="display:none">
+      <div class="ctrl-label" style="margin-bottom:4px">Step <span id="step-num">1</span> / <span id="step-total">4</span></div>
+      <div class="step-formula" id="step-formula"></div>
+    </div>
+
+    <div class="error-box" id="error-box">
+      <div>Euler endpoint error: <span id="err-euler" style="color:#c23616;font-weight:700">—</span></div>
+      <div>Heun endpoint error: <span id="err-heun" style="color:#1e3a5f;font-weight:700">—</span></div>
+      <div style="margin-top:4px;font-size:9.5px;color:#999">
+        Euler NFEs: <span id="nfe-euler">—</span> · Heun NFEs: <span id="nfe-heun">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const DPR = window.devicePixelRatio || 1;
+const W = 620, H = 440;
+cv.width = W*DPR; cv.height = H*DPR;
+cv.style.width = W+'px'; cv.style.height = H+'px';
+ctx.scale(DPR,DPR);
+
+const pad = {l:40, r:16, t:16, b:32};
+const iW = W-pad.l-pad.r, iH = H-pad.t-pad.b;
+
+let MU = 2.5, X1 = 0.8, NSTEPS = 4;
+let curStep = -1; // -1 = show all
+let showField = true;
+
+const xRange = () => [-MU-2.5, MU+2.5];
+const toX = t => pad.l + t * iW;
+const toY = x => { const [mn,mx]=xRange(); return pad.t+iH-((x-mn)/(mx-mn))*iH; };
+
+// ─── Marginal velocity (closed-form, 2 point masses) ───
+function vMarg(x, t) {
+  if (t < 1e-5) return 0;
+  const mus = [-MU, MU];
+  const lws = mus.map(mu => -0.5*((x-(1-t)*mu)/t)**2);
+  const maxLw = Math.max(...lws);
+  const ws = lws.map(lw => Math.exp(lw-maxLw));
+  const S = ws[0]+ws[1];
+  const Exo = (ws[0]*mus[0] + ws[1]*mus[1])/S;
+  return (x - Exo) / t;
+}
+
+// ─── Reference (many-step Euler) ───
+function solveRef(x1) {
+  const n = 1000, tMin = 0.002, dt = (1-tMin)/n;
+  const pts = [{t:1, x:x1}];
+  let x = x1;
+  for (let i=0; i<n; i++) {
+    const t = 1 - i*dt;
+    x -= dt * vMarg(x, t);
+    pts.push({t: t-dt, x});
+  }
+  return pts;
+}
+
+// ─── Euler solver (step by step) ───
+function solveEuler(x1, nSteps) {
+  const dt = 1/nSteps;
+  const pts = [{t:1, x:x1}];
+  const steps = [];
+  let x = x1;
+  for (let i=0; i<nSteps; i++) {
+    const t = 1 - i*dt;
+    const v = vMarg(x, t);
+    const xNew = x - dt*v;
+    steps.push({t, x, v, xNew, tNew: t-dt});
+    x = xNew;
+    pts.push({t: t-dt, x});
+  }
+  return {pts, steps};
+}
+
+// ─── Heun solver (step by step) ───
+function solveHeun(x1, nSteps) {
+  const dt = 1/nSteps;
+  const pts = [{t:1, x:x1}];
+  const steps = [];
+  let x = x1;
+  for (let i=0; i<nSteps; i++) {
+    const t = 1 - i*dt;
+    const v1 = vMarg(x, t);
+    const xPred = x - dt*v1;          // predict (Euler draft)
+    const v2 = vMarg(xPred, t-dt);    // correct velocity at predicted point
+    const xNew = x - dt/2*(v1+v2);    // average
+    steps.push({t, x, v1, xPred, tPred: t-dt, v2, xNew, tNew: t-dt});
+    x = xNew;
+    pts.push({t: t-dt, x});
+  }
+  return {pts, steps};
+}
+
+// ─── Draw ───
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#fcfbf9'; ctx.fillRect(0,0,W,H);
+  const [xMin,xMax] = xRange();
+
+  // Grid
+  ctx.strokeStyle='#e8e4df'; ctx.lineWidth=0.5;
+  for(let t=0;t<=1;t+=0.25){ctx.beginPath();ctx.moveTo(toX(t),pad.t);ctx.lineTo(toX(t),H-pad.b);ctx.stroke();}
+  for(let i=0;i<7;i++){const x=xMin+i*(xMax-xMin)/6;ctx.beginPath();ctx.moveTo(pad.l,toY(x));ctx.lineTo(W-pad.r,toY(x));ctx.stroke();}
+
+  // Labels
+  ctx.fillStyle='#888';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+  [0,.25,.5,.75,1].forEach(t=>{ctx.fillText(t.toFixed(2),toX(t),H-pad.b+14);});
+  ctx.fillText('t',pad.l+iW/2,H-4);
+  ctx.save();ctx.translate(10,pad.t+iH/2);ctx.rotate(-Math.PI/2);ctx.fillText('x',0,0);ctx.restore();
+
+  // Data mode dots
+  [-MU,MU].forEach(mu=>{
+    ctx.fillStyle='#1e3a5f';ctx.beginPath();ctx.arc(toX(0),toY(mu),5,0,2*Math.PI);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(toX(0),toY(mu),2,0,2*Math.PI);ctx.fill();
+  });
+  ctx.fillStyle='#1e3a5f';ctx.font="bold 10px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+  ctx.fillText('±μ (data)',toX(0)+8,toY(MU)-2);
+
+  // Velocity field
+  if(showField){
+    ctx.globalAlpha=0.2;
+    for(let ti=0.06;ti<=0.97;ti+=0.07){
+      for(let xi=xMin+0.4;xi<=xMax-0.4;xi+=(xMax-xMin)/16){
+        const v=vMarg(xi,ti);
+        const cx=toX(ti),cy=toY(xi);
+        const sc=0.035;
+        const dx=sc*iW, dy=-v*sc*iH/(xMax-xMin);
+        const len=Math.sqrt(dx*dx+dy*dy);
+        if(len<1)continue;
+        const ml=15,fr=Math.min(len,ml)/len;
+        const adx=dx*fr,ady=dy*fr;
+        ctx.strokeStyle='#6c3483';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+adx,cy+ady);ctx.stroke();
+        const ang=Math.atan2(ady,adx),hl=2.5;
+        ctx.beginPath();
+        ctx.moveTo(cx+adx,cy+ady);ctx.lineTo(cx+adx-hl*Math.cos(ang-.5),cy+ady-hl*Math.sin(ang-.5));
+        ctx.moveTo(cx+adx,cy+ady);ctx.lineTo(cx+adx-hl*Math.cos(ang+.5),cy+ady-hl*Math.sin(ang+.5));
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // Reference
+  const ref = solveRef(X1);
+  ctx.strokeStyle='#bbb';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+  ctx.beginPath();
+  ref.forEach((p,i)=>{const cx=toX(p.t),cy=toY(p.x);i?ctx.lineTo(cx,cy):ctx.moveTo(cx,cy);});
+  ctx.stroke();ctx.setLineDash([]);
+
+  const euler = solveEuler(X1, NSTEPS);
+  const heun = solveHeun(X1, NSTEPS);
+  const maxStep = curStep < 0 ? NSTEPS : curStep + 1;
+
+  // ─── Draw Euler ───
+  // Steps
+  for(let i=0; i<Math.min(maxStep, euler.steps.length); i++){
+    const s = euler.steps[i];
+    // velocity arrow at current point
+    const cx=toX(s.t), cy=toY(s.x);
+    const cxN=toX(s.tNew), cyN=toY(s.xNew);
+
+    // Highlight current step more
+    const isCurrent = (curStep >= 0 && i === curStep);
+
+    // velocity arrow
+    if(isCurrent){
+      ctx.strokeStyle='#c2361644';ctx.lineWidth=1.5;
+      const vLen = 0.06;
+      const arrowEndT = s.t + vLen; // forward in t to show direction
+      const arrowEndX = s.x + vLen * (-s.v); // v points in -t direction but we show as vector
+      // Actually just show the step line thicker
+    }
+
+    // Step line
+    ctx.strokeStyle = isCurrent ? '#c23616' : '#c2361688';
+    ctx.lineWidth = isCurrent ? 3 : 2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cxN,cyN);ctx.stroke();
+
+    // Velocity arrow at start
+    if(isCurrent){
+      const arrLen = 40;
+      const vNorm = Math.sqrt(1 + s.v*s.v);
+      const dtPx = -arrLen / vNorm; // in t direction (leftward)
+      const dxPx = -s.v * arrLen / vNorm; // in x direction
+      const arrowDx = dtPx * (iW); // approximate
+      const arrowDy = dxPx * (-iH/(xMax-xMin));
+      // Normalize to fixed pixel length
+      const pxLen = Math.sqrt(arrowDx*arrowDx + arrowDy*arrowDy);
+      const scale = Math.min(arrLen, pxLen) / (pxLen || 1);
+
+      ctx.strokeStyle='#c23616';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cx,cy);
+      ctx.lineTo(cx + arrowDx*scale*0.7, cy + arrowDy*scale*0.7);ctx.stroke();
+      // arrowhead
+      const ang=Math.atan2(arrowDy*scale,arrowDx*scale);
+      ctx.beginPath();
+      ctx.moveTo(cx+arrowDx*scale*0.7,cy+arrowDy*scale*0.7);
+      ctx.lineTo(cx+arrowDx*scale*0.7-5*Math.cos(ang-.4),cy+arrowDy*scale*0.7-5*Math.sin(ang-.4));
+      ctx.moveTo(cx+arrowDx*scale*0.7,cy+arrowDy*scale*0.7);
+      ctx.lineTo(cx+arrowDx*scale*0.7-5*Math.cos(ang+.4),cy+arrowDy*scale*0.7-5*Math.sin(ang+.4));
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle='#c23616';ctx.font="bold 9px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+      ctx.fillText('v(x,t)', cx+arrowDx*scale*0.7+4, cy+arrowDy*scale*0.7-4);
+    }
+
+    // Dots
+    ctx.fillStyle='#c23616';
+    ctx.beginPath();ctx.arc(cx,cy,isCurrent?5:3,0,2*Math.PI);ctx.fill();
+    if(i===Math.min(maxStep,euler.steps.length)-1){
+      ctx.beginPath();ctx.arc(cxN,cyN,4,0,2*Math.PI);ctx.fill();
+    }
+  }
+
+  // ─── Draw Heun ───
+  for(let i=0; i<Math.min(maxStep, heun.steps.length); i++){
+    const s = heun.steps[i];
+    const cx=toX(s.t), cy=toY(s.x);
+    const cxP=toX(s.tPred), cyP=toY(s.xPred);
+    const cxN=toX(s.tNew), cyN=toY(s.xNew);
+
+    const isCurrent = (curStep >= 0 && i === curStep);
+
+    // Predict line (dashed, faint)
+    if(isCurrent){
+      ctx.strokeStyle='#1e3a5f44';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cxP,cyP);ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Predict dot (hollow)
+      ctx.strokeStyle='#1e3a5f';ctx.lineWidth=1.5;ctx.fillStyle='#fff';
+      ctx.beginPath();ctx.arc(cxP,cyP,4,0,2*Math.PI);ctx.fill();ctx.stroke();
+
+      // Label predict
+      ctx.fillStyle='#1e3a5f88';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+      ctx.fillText('predict', cxP+6, cyP-6);
+
+      // v₁ arrow at start
+      drawVelocityArrow(cx, cy, s.v1, '#1e3a5f', 'v₁');
+      // v₂ arrow at predicted point
+      drawVelocityArrow(cxP, cyP, s.v2, '#1e3a5f88', 'v₂');
+    }
+
+    // Corrected step line
+    ctx.strokeStyle = isCurrent ? '#1e3a5f' : '#1e3a5f88';
+    ctx.lineWidth = isCurrent ? 3 : 2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cxN,cyN);ctx.stroke();
+
+    // Dots
+    ctx.fillStyle='#1e3a5f';
+    ctx.beginPath();ctx.arc(cx,cy,isCurrent?5:3,0,2*Math.PI);ctx.fill();
+    if(i===Math.min(maxStep,heun.steps.length)-1){
+      ctx.beginPath();ctx.arc(cxN,cyN,4,0,2*Math.PI);ctx.fill();
+    }
+  }
+
+  // ─── Labels ───
+  if(maxStep > 0){
+    const eEnd = euler.pts[Math.min(maxStep, euler.pts.length-1)];
+    const hEnd = heun.pts[Math.min(maxStep, heun.pts.length-1)];
+    ctx.font="bold 10px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+    ctx.fillStyle='#c23616';ctx.fillText('Euler',toX(eEnd.t)-30,toY(eEnd.x)+14);
+    ctx.fillStyle='#1e3a5f';ctx.fillText('Heun',toX(hEnd.t)-30,toY(hEnd.x)-8);
+  }
+
+  // Start point
+  ctx.fillStyle='#333';ctx.font="bold 10px 'IBM Plex Mono',monospace";ctx.textAlign='right';
+  ctx.fillText('x₁ (start)',toX(1)-6,toY(X1)-8);
+
+  // ─── Errors ───
+  const refEnd = ref[ref.length-1].x;
+  const eulerEnd = euler.pts[euler.pts.length-1].x;
+  const heunEnd = heun.pts[heun.pts.length-1].x;
+  document.getElementById('err-euler').textContent = Math.abs(eulerEnd-refEnd).toFixed(4);
+  document.getElementById('err-heun').textContent = Math.abs(heunEnd-refEnd).toFixed(4);
+  document.getElementById('nfe-euler').textContent = NSTEPS;
+  document.getElementById('nfe-heun').textContent = NSTEPS*2;
+
+  // ─── Step info ───
+  const infoEl = document.getElementById('step-info');
+  const formulaEl = document.getElementById('step-formula');
+  if(curStep >= 0 && curStep < NSTEPS){
+    infoEl.style.display = '';
+    document.getElementById('step-num').textContent = curStep+1;
+    document.getElementById('step-total').textContent = NSTEPS;
+    const es = euler.steps[curStep];
+    const hs = heun.steps[curStep];
+    formulaEl.innerHTML =
+      `<span class="euler-hl">Euler:</span>\n` +
+      `  x_{${es.tNew.toFixed(2)}} = ${es.x.toFixed(3)} − ${(1/NSTEPS).toFixed(3)}·(${es.v.toFixed(3)})\n` +
+      `        = <span class="euler-hl">${es.xNew.toFixed(3)}</span>\n\n` +
+      `<span class="heun-hl">Heun:</span>\n` +
+      `  <span class="predict-hl">predict: x̃ = ${hs.x.toFixed(3)} − ${(1/NSTEPS).toFixed(3)}·v₁\n` +
+      `          v₁ = ${hs.v1.toFixed(3)}  →  x̃ = ${hs.xPred.toFixed(3)}</span>\n` +
+      `  correct: v₂ = v(x̃, ${hs.tPred.toFixed(2)}) = ${hs.v2.toFixed(3)}\n` +
+      `  x_{${hs.tNew.toFixed(2)}} = ${hs.x.toFixed(3)} − ${(1/NSTEPS).toFixed(3)}·½(v₁+v₂)\n` +
+      `        = <span class="heun-hl">${hs.xNew.toFixed(3)}</span>`;
+  } else {
+    infoEl.style.display = 'none';
+  }
+}
+
+function drawVelocityArrow(cx, cy, v, color, label) {
+  const [xMin,xMax] = xRange();
+  const arrLen = 32;
+  const vNorm = Math.sqrt(1 + v*v) || 1;
+  const dtPx = (-1/vNorm) * arrLen * (iW/1);
+  const dxPx = (-v/vNorm) * arrLen * (iH/(xMax-xMin));
+  // negative t direction, v in x direction
+  const pxLen = Math.sqrt(dtPx*dtPx + dxPx*dxPx) || 1;
+  const sc = Math.min(arrLen, pxLen)/pxLen;
+  const adx = dtPx*sc*0.6, ady = -dxPx*sc*0.6;
+  ctx.strokeStyle=color;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+adx,cy+ady);ctx.stroke();
+  const ang=Math.atan2(ady,adx);
+  ctx.beginPath();
+  ctx.moveTo(cx+adx,cy+ady);
+  ctx.lineTo(cx+adx-4*Math.cos(ang-.4),cy+ady-4*Math.sin(ang-.4));
+  ctx.moveTo(cx+adx,cy+ady);
+  ctx.lineTo(cx+adx-4*Math.cos(ang+.4),cy+ady-4*Math.sin(ang+.4));
+  ctx.stroke();
+  ctx.fillStyle=color;ctx.font="bold 8px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+  ctx.fillText(label, cx+adx+3, cy+ady-3);
+}
+
+// ─── Controls ───
+document.getElementById('nsteps-slider').addEventListener('input', e => {
+  NSTEPS = parseInt(e.target.value);
+  document.getElementById('nsteps-val').textContent = NSTEPS;
+  curStep = -1; draw();
+});
+document.getElementById('x1-slider').addEventListener('input', e => {
+  X1 = parseFloat(e.target.value);
+  document.getElementById('x1-val').textContent = X1.toFixed(2);
+  curStep = -1; draw();
+});
+document.getElementById('mu-slider').addEventListener('input', e => {
+  MU = parseFloat(e.target.value);
+  document.getElementById('mu-val').textContent = MU.toFixed(1);
+  curStep = -1; draw();
+});
+document.getElementById('show-field').addEventListener('change', e => { showField=e.target.checked; draw(); });
+
+document.getElementById('btn-step').addEventListener('click', () => {
+  curStep = Math.min(curStep+1, NSTEPS-1); draw();
+});
+document.getElementById('btn-all').addEventListener('click', () => {
+  curStep = -1; draw();
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  curStep = -1; draw();
+});
+
+draw();
+</script>
+</body>
+</html>

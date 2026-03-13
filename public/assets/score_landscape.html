@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Score Function: Arrows Point Uphill</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:780px;margin:0 auto;padding:24px 22px 18px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+h3{font-size:18px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:5px;margin-bottom:8px}
+.desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
+.desc code{font-size:11px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+canvas{display:block;margin:0 auto;border:1px solid #e2ddd5;border-radius:3px}
+.ctrl-row{display:flex;gap:14px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.slider-group{flex:1;min-width:150px}
+.slider-label{font-size:10.5px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+input[type=range]{width:100%;height:5px}
+label{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:#555;cursor:pointer}
+.note{margin-top:10px;padding:8px 12px;background:#f8f6f2;border-radius:3px;font-size:11.5px;
+  font-family:'IBM Plex Mono',monospace;color:#555;line-height:1.6;border-left:2.5px solid #1e3a5f}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive &middot; The Score Function: Arrows Point Uphill on the Density Landscape</h3>
+<p class="desc">
+  The <strong>score</strong> &#x2207;<sub>x</sub>log p<sub>t</sub>(x) is the gradient of the log-density.
+  At each point x, it points toward where the density p<sub>t</sub> is <em>higher</em> &mdash;
+  like an arrow pointing uphill on a landscape.
+  The <span style="color:#1e3a5f"><strong>blue surface</strong></span> is the density p<sub>t</sub>(x) in 2D, viewed as a 3D landscape.
+  The <span style="color:#c23616"><strong>red arrows</strong></span> on the ground plane are the score field.
+  Drag <strong>t</strong> to watch the landscape flatten and the arrows change.
+</p>
+
+<div class="ctrl-row">
+  <div class="slider-group">
+    <div class="slider-label">noise level t = <span id="t-val">0.20</span>
+      <span style="font-weight:400;color:#999">(0 = sharp peaks, 1 = flat noise)</span></div>
+    <input type="range" id="t-slider" min="0.03" max="0.95" step="0.01" value="0.20" style="accent-color:#1e3a5f">
+  </div>
+  <label><input type="checkbox" id="show-arrows" checked style="accent-color:#c23616"> score arrows</label>
+  <label><input type="checkbox" id="show-surface" checked style="accent-color:#1e3a5f"> density surface</label>
+</div>
+
+<canvas id="cv" width="720" height="500"></canvas>
+<div class="note" id="note"></div>
+</div>
+
+<script>
+var DPR=window.devicePixelRatio||1, CW=720, CH=500;
+var T=0.20, showArrows=true, showSurface=true;
+
+var modes=[{x:-2.2,y:1.5,w:0.35},{x:2.0,y:0.8,w:0.35},{x:0,y:-2.0,w:0.30}];
+
+function ptDens(x,y,t){
+  var sig=Math.max(t,0.008),al=Math.cos(t*Math.PI/2),s2=sig*sig;
+  var d=0;
+  for(var k=0;k<modes.length;k++){
+    var m=modes[k];
+    var dx=x-al*m.x, dy=y-al*m.y;
+    d+=m.w*Math.exp(-0.5*(dx*dx+dy*dy)/s2)/(2*Math.PI*s2);
+  }
+  return d;
+}
+
+function scoreFn(x,y,t){
+  var sig=Math.max(t,0.008),al=Math.cos(t*Math.PI/2),s2=sig*sig;
+  var lws=modes.map(function(m){
+    var dx=x-al*m.x,dy=y-al*m.y;
+    return{lw:Math.log(m.w)-0.5*(dx*dx+dy*dy)/s2, dx:dx, dy:dy};
+  });
+  var maxLw=Math.max.apply(null,lws.map(function(l){return l.lw;}));
+  var ws=lws.map(function(l){return Math.exp(l.lw-maxLw);});
+  var S=ws.reduce(function(a,b){return a+b;},0);
+  var sx=0,sy=0;
+  for(var k=0;k<modes.length;k++){
+    sx+=ws[k]*(-lws[k].dx/s2);
+    sy+=ws[k]*(-lws[k].dy/s2);
+  }
+  return{x:sx/S, y:sy/S};
+}
+
+// Isometric projection
+var ISO_ANG=0.45; // tilt angle
+var ISO_SC=58;    // scale
+var CX=CW/2, CY=CH*0.52;
+
+function project(x,y,z){
+  // x,y = ground plane, z = height
+  var px=CX + (x*Math.cos(0.9)-y*Math.sin(0.9))*ISO_SC;
+  var py=CY + (x*Math.sin(0.9)+y*Math.cos(0.9))*ISO_SC*ISO_ANG - z*ISO_SC*2.2;
+  return{x:px,y:py};
+}
+
+function draw(){
+  var cv=document.getElementById('cv');
+  cv.width=CW*DPR;cv.height=CH*DPR;cv.style.width=CW+'px';cv.style.height=CH+'px';
+  var ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
+  ctx.fillStyle='#fcfbf9';ctx.fillRect(0,0,CW,CH);
+
+  var al=Math.cos(T*Math.PI/2);
+  var lo=-4,hi=4;
+
+  // ── Ground plane grid ──
+  ctx.strokeStyle='#e8e4df';ctx.lineWidth=0.5;
+  for(var v=-3;v<=3;v+=1){
+    var p1=project(lo,v,0),p2=project(hi,v,0);
+    ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+    p1=project(v,lo,0);p2=project(v,hi,0);
+    ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+  }
+
+  // ── Ground plane colored heatmap ──
+  var res=50;
+  var step=(hi-lo)/res;
+  // Collect tiles sorted by depth (back-to-front rendering)
+  var tiles=[];
+  for(var iy=0;iy<res;iy++){
+    for(var ix=0;ix<res;ix++){
+      var x=lo+(ix+0.5)*step, y=lo+(iy+0.5)*step;
+      var d=ptDens(x,y,T);
+      var p=project(x,y,0);
+      tiles.push({x:x,y:y,d:d,px:p.x,py:p.y,depth:p.y});
+    }
+  }
+
+  // Sort back to front
+  tiles.sort(function(a,b){return a.depth-b.depth;});
+
+  // Find max density for coloring
+  var maxD=0;
+  for(var i=0;i<tiles.length;i++) if(tiles[i].d>maxD)maxD=tiles[i].d;
+
+  // Draw ground heatmap
+  var tileSize=step*ISO_SC;
+  for(var i=0;i<tiles.length;i++){
+    var t2=tiles[i];
+    var b=Math.pow(t2.d/(maxD||1),0.4);
+    var r=Math.round(240-60*b), g=Math.round(245-75*b), bl=Math.round(250-10*b);
+    ctx.fillStyle='rgb('+r+','+g+','+bl+')';
+    // Draw as a small parallelogram
+    var hw=step*0.52;
+    var c1=project(t2.x-hw,t2.y-hw,0);
+    var c2=project(t2.x+hw,t2.y-hw,0);
+    var c3=project(t2.x+hw,t2.y+hw,0);
+    var c4=project(t2.x-hw,t2.y+hw,0);
+    ctx.beginPath();
+    ctx.moveTo(c1.x,c1.y);ctx.lineTo(c2.x,c2.y);ctx.lineTo(c3.x,c3.y);ctx.lineTo(c4.x,c4.y);
+    ctx.closePath();ctx.fill();
+  }
+
+  // ── Density surface (mesh with height = density) ──
+  if(showSurface){
+    var sRes=40;
+    var sStep=(hi-lo)/sRes;
+
+    // Draw surface as strips, back to front
+    for(var iy=0;iy<sRes;iy++){
+      var y=lo+(iy+0.5)*sStep;
+      // Build a strip of points
+      var pts=[];
+      var btm=[];
+      for(var ix=0;ix<=sRes;ix++){
+        var x=lo+ix*sStep;
+        var d=ptDens(x,y,T);
+        var h=d/(maxD||1)*1.8; // height scale
+        var pTop=project(x,y,h);
+        var pBot=project(x,y,0);
+        pts.push(pTop);
+        btm.push(pBot);
+      }
+
+      // Fill the surface strip (gradient from dark to light based on height)
+      for(var ix=0;ix<sRes;ix++){
+        var x=lo+(ix+0.5)*sStep;
+        var d=ptDens(x,y,T);
+        var h=d/(maxD||1);
+        var alpha=0.15+0.5*h;
+
+        ctx.fillStyle='rgba(30,58,95,'+alpha.toFixed(3)+')';
+        ctx.beginPath();
+        ctx.moveTo(pts[ix].x,pts[ix].y);
+        ctx.lineTo(pts[ix+1].x,pts[ix+1].y);
+        ctx.lineTo(btm[ix+1].x,btm[ix+1].y);
+        ctx.lineTo(btm[ix].x,btm[ix].y);
+        ctx.closePath();ctx.fill();
+      }
+
+      // Surface outline
+      ctx.strokeStyle='rgba(30,58,95,0.3)';ctx.lineWidth=0.8;
+      ctx.beginPath();
+      for(var ix=0;ix<=sRes;ix++){
+        ix?ctx.lineTo(pts[ix].x,pts[ix].y):ctx.moveTo(pts[ix].x,pts[ix].y);
+      }
+      ctx.stroke();
+    }
+
+    // Cross-lines (perpendicular direction)
+    for(var ix=0;ix<sRes;ix+=2){
+      var x=lo+(ix+0.5)*sStep;
+      ctx.strokeStyle='rgba(30,58,95,0.15)';ctx.lineWidth=0.5;
+      ctx.beginPath();
+      for(var iy=0;iy<=sRes;iy++){
+        var y=lo+iy*sStep;
+        var d=ptDens(x,y,T);
+        var h=d/(maxD||1)*1.8;
+        var p=project(x,y,h);
+        iy?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // ── Score arrows on ground plane ──
+  if(showArrows){
+    var aRes=10;
+    var aStep=(hi-lo)/(aRes+1);
+
+    // Collect arrows with depth for sorting
+    var arrows=[];
+    for(var iy=1;iy<=aRes;iy++){
+      for(var ix=1;ix<=aRes;ix++){
+        var x=lo+ix*aStep, y=lo+iy*aStep;
+        var sc=scoreFn(x,y,T);
+        var mag=Math.sqrt(sc.x*sc.x+sc.y*sc.y);
+        var p=project(x,y,0);
+        arrows.push({x:x,y:y,sx:sc.x,sy:sc.y,mag:mag,px:p.x,py:p.y,depth:p.y});
+      }
+    }
+    arrows.sort(function(a,b){return a.depth-b.depth;});
+
+    var maxMag=0;
+    for(var i=0;i<arrows.length;i++) if(arrows[i].mag>maxMag)maxMag=arrows[i].mag;
+    var arrowScale=aStep*0.7/(maxMag||1);
+
+    for(var i=0;i<arrows.length;i++){
+      var a=arrows[i];
+      // Project the arrow endpoint
+      var endX=a.x+a.sx*arrowScale;
+      var endY=a.y+a.sy*arrowScale;
+      var pEnd=project(endX,endY,0);
+
+      var dx=pEnd.x-a.px, dy=pEnd.y-a.py;
+      var len=Math.sqrt(dx*dx+dy*dy);
+      if(len<2)continue;
+
+      var alpha2=(0.3+0.7*Math.min(a.mag/(maxMag||1),1));
+      var ang=Math.atan2(dy,dx);
+      var hl=Math.min(14,len*0.55);
+      var hw=hl*0.45;
+
+      // Shaft (shortened so head sits at tip)
+      var shX=pEnd.x-hl*0.5*Math.cos(ang), shY=pEnd.y-hl*0.5*Math.sin(ang);
+      ctx.strokeStyle='rgba(255,255,255,'+alpha2.toFixed(2)+')';ctx.lineWidth=5;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(a.px,a.py);ctx.lineTo(shX,shY);ctx.stroke();
+      ctx.strokeStyle='rgba(194,54,22,'+alpha2.toFixed(2)+')';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(a.px,a.py);ctx.lineTo(shX,shY);ctx.stroke();
+
+      // Big triangle head with white outline
+      var hx1=pEnd.x-hl*Math.cos(ang)-hw*Math.cos(ang-Math.PI/2);
+      var hy1=pEnd.y-hl*Math.sin(ang)-hw*Math.sin(ang-Math.PI/2);
+      var hx2=pEnd.x-hl*Math.cos(ang)+hw*Math.cos(ang-Math.PI/2);
+      var hy2=pEnd.y-hl*Math.sin(ang)+hw*Math.sin(ang-Math.PI/2);
+      ctx.strokeStyle='rgba(255,255,255,'+alpha2.toFixed(2)+')';ctx.lineWidth=2;ctx.lineJoin='round';
+      ctx.beginPath();ctx.moveTo(pEnd.x,pEnd.y);ctx.lineTo(hx1,hy1);ctx.lineTo(hx2,hy2);ctx.closePath();ctx.stroke();
+      ctx.fillStyle='rgba(194,54,22,'+alpha2.toFixed(2)+')';
+      ctx.beginPath();ctx.moveTo(pEnd.x,pEnd.y);ctx.lineTo(hx1,hy1);ctx.lineTo(hx2,hy2);ctx.closePath();ctx.fill();
+    }
+  }
+
+  // ── Mode centers on ground ──
+  for(var k=0;k<modes.length;k++){
+    var m=modes[k];
+    var p=project(al*m.x,al*m.y,0);
+    ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(p.x-5,p.y-3);ctx.lineTo(p.x+5,p.y+3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(p.x+5,p.y-3);ctx.lineTo(p.x-5,p.y+3);ctx.stroke();
+  }
+
+  // ── Labels ──
+  ctx.fillStyle='#1e3a5f';ctx.font="bold 12px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+  ctx.fillText('p\u209C(x)  (density landscape)',14,22);
+  ctx.fillStyle='#c23616';ctx.font="bold 11px 'IBM Plex Mono',monospace";
+  ctx.fillText('\u2207log p\u209C(x)  (score arrows)',14,38);
+  ctx.fillStyle='#888';ctx.font="10px 'IBM Plex Mono',monospace";
+  ctx.fillText('arrows point uphill \u2192 toward higher density',14,52);
+
+  // Height axis indicator
+  var pO=project(lo,lo,0), pH=project(lo,lo,1.8);
+  ctx.strokeStyle='#1e3a5f55';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pO.x,pO.y);ctx.lineTo(pH.x,pH.y);ctx.stroke();
+  ctx.fillStyle='#1e3a5f55';ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+  ctx.fillText('p\u209C',pH.x-8,pH.y-4);
+  // Arrowhead
+  ctx.beginPath();ctx.moveTo(pH.x,pH.y);ctx.lineTo(pH.x-3,pH.y+6);ctx.lineTo(pH.x+3,pH.y+6);ctx.closePath();ctx.fill();
+
+  // Note
+  var el=document.getElementById('note');
+  if(T<0.15){
+    el.innerHTML='<strong>Low noise (t \u2248 0):</strong> The density has sharp, tall peaks at the data modes. Score arrows are <em>strong</em> and point sharply inward toward each peak \u2014 like steep hillsides. Between peaks, arrows point toward the nearest mode. This is the regime where the score field carries the most information about the data structure.';
+  } else if(T>0.7){
+    el.innerHTML='<strong>High noise (t \u2248 1):</strong> The density is nearly a flat Gaussian mound. Score arrows are <em>weak</em> and point gently toward the center \u2014 the landscape is almost flat. The modes have merged. This is why denoising is easy at high noise (just point toward center) but hard at low noise (must resolve multiple peaks).';
+  } else {
+    el.innerHTML='<strong>Intermediate noise (t = '+T.toFixed(2)+'):</strong> The density landscape is partially flattened. Near the peaks, score arrows still converge strongly. In the valleys between modes, arrows point toward the dominant nearby peak. The score field encodes the same information as \u03B5-prediction or x\u0302\u2080-prediction \u2014 it is just &#x2207;log p\u209C = \u2212\u03B5\u0302/\u03C3\u209C.';
+  }
+}
+
+document.getElementById('t-slider').oninput=function(e){
+  T=parseFloat(e.target.value);document.getElementById('t-val').textContent=T.toFixed(2);draw();
+};
+document.getElementById('show-arrows').onchange=function(e){showArrows=e.target.checked;draw();};
+document.getElementById('show-surface').onchange=function(e){showSurface=e.target.checked;draw();};
+
+draw();
+</script>
+</body></html>
