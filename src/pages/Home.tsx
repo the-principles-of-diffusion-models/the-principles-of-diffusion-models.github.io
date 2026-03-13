@@ -633,6 +633,33 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
               </p>
             </div>
 
+            <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4 border-l-4 border-violet-500">
+              <div className="flex items-start justify-between mb-2">
+                <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">
+                  2026/04/27
+                </span>
+              </div>
+              <p className="text-slate-700 dark:text-slate-300">
+                Our blog post has been accepted to the <strong>ICLR 2026 Blog Post Track</strong>! Read it on the{" "}
+                <a
+                  href="https://iclr-blogposts.github.io/2026/blog/2026/tracing-principles-behind-modern-diffusion-models/"
+                  className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 underline underline-offset-2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ICLR official page
+                </a>
+                , or check out our{" "}
+                <a
+                  href="https://the-principles-of-diffusion-models.github.io/#/blog"
+                  className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 underline underline-offset-2"
+                >
+                  Blog Post
+                </a>
+                {" "}below.
+              </p>
+            </div>
+
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-slate-500">
               <div className="flex items-start justify-between mb-2">
                 <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
@@ -662,7 +689,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                 </span>
               </div>
               <p className="text-slate-700 dark:text-slate-300">
-                Added <strong>Teaching Guide</strong> and <strong>Blog Post (Compact)</strong> sections for enhanced learning resources and accessible content overview.
+                Added <strong>Teaching Guide</strong> and <strong>Blog Post</strong> sections for enhanced learning resources and accessible content overview.
               </p>
             </div>
 
@@ -716,7 +743,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                       <Icon className="w-5 h-5" />
                       {tab.label}
                       {tab.badge && (
-                        <span className="ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold leading-none bg-amber-300 text-amber-900 shadow-sm">
+                        <span className="ml-1.5 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold leading-none bg-amber-300 text-amber-900 shadow-sm">
                           {tab.badge}
                         </span>
                       )}
@@ -737,7 +764,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                       <Icon className="w-5 h-5" />
                       {tab.label}
                       {tab.badge && (
-                        <span className="ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold leading-none bg-amber-300 text-amber-900 shadow-sm">
+                        <span className="ml-1.5 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold leading-none bg-amber-300 text-amber-900 shadow-sm">
                           {tab.badge}
                         </span>
                       )}
