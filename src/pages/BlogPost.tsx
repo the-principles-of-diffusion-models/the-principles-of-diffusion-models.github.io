@@ -21,6 +21,14 @@ export default function BlogPost() {
 
         <article className="prose prose-lg prose-slate max-w-none">
           <header className="mb-12 pb-8 border-b border-slate-200 dark:border-slate-700">
+            <div className="mb-6">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-200 dark:shadow-orange-900/30">
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                </svg>
+                Accepted to ICLR 2026 Blogpost Track!
+              </span>
+            </div>
             <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">
               Tracing the Principles Behind Modern Diffusion Models
             </h1>
@@ -60,6 +68,19 @@ export default function BlogPost() {
 
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Finally, we focus on speed. Diffusion is <em>high fidelity</em> but often slow because sampling is iterative. We end with <em>flow map models</em>, which keep the same diffusion backbone but aim to learn <em>long time-jumps</em> of the probability-flow dynamics directly, replacing many tiny steps with a few big, accurate jumps.
+              </p>
+
+              <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
+                We also provide the full PDF and supplemental code on the page:{" "}
+                <a
+                  href="https://the-principles-of-diffusion-models.github.io/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                >
+                  The Principles of Diffusion Models
+                </a>
+                .
               </p>
             </section>
 
@@ -1586,4 +1607,3 @@ export default function BlogPost() {
     </div>
   );
 }
-
