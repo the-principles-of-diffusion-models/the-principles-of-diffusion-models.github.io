@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Score Matching vs Denoising Score Matching</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent}
+.w{max-width:780px;margin:0 auto;padding:24px 22px 18px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+h3{font-size:18px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:5px;margin-bottom:8px}
+.desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
+.desc code{font-size:11px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+canvas{display:block;margin:0 auto;border:1px solid #e2ddd5;border-radius:3px;cursor:grab}
+canvas:active{cursor:grabbing}
+.ctrl-row{display:flex;gap:14px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.slider-group{flex:1;min-width:140px}
+.slider-label{font-size:10.5px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+input[type=range]{width:100%;height:5px}
+.cond-btns{display:flex;gap:5px;flex-wrap:nowrap;margin-bottom:8px;overflow-x:auto}
+.cond-btn{padding:5px 8px;border-radius:2px;border:1.5px solid #ddd;background:#fff;font-size:10px;
+  font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .12s;line-height:1.3;flex-shrink:0}
+.cond-btn:hover{background:#fafaf8}
+.cond-btn.on{font-weight:700;border-width:2px}
+.cond-btn .sub{font-size:8.5px;font-weight:400;display:block;color:#999}
+.note{margin-top:10px;padding:8px 12px;background:#f8f6f2;border-radius:3px;font-size:11.5px;
+  font-family:'IBM Plex Mono',monospace;color:#555;line-height:1.6;border-left:2.5px solid #c23616}
+</style>
+</head>
+<body>
+<div class="w">
+<h3>Interactive &middot; Score Matching vs Denoising Score Matching</h3>
+<p class="desc">
+  <strong>Drag x&#x209C;</strong> (white dot). In <span style="color:#c23616"><strong>marginal</strong></span> mode,
+  computing the score at x&#x209C; requires summing contributions from <em>every</em> data point &mdash;
+  each colored arrow is one mode's pull, and the black arrow is their weighted sum.
+  With millions of data points, this sum is intractable.
+  In <span style="color:#2d6a4f"><strong>conditioned</strong></span> mode, only one x&#x2080; is given &mdash;
+  the score is a single closed-form arrow.
+</p>
+
+<div class="ctrl-row">
+  <div class="slider-group">
+    <div class="slider-label">noise level t = <span id="t-val">0.35</span></div>
+    <input type="range" id="t-slider" min="0.08" max="0.92" step="0.01" value="0.35" style="accent-color:#c23616">
+  </div>
+</div>
+
+<div class="cond-btns">
+  <button class="cond-btn on" id="btn-all" style="border-color:#c23616">
+    Marginal &#x2207;log p&#x209C;<span class="sub">sum over ALL data &mdash; HARD</span>
+  </button>
+  <button class="cond-btn" id="btn-m0" style="border-color:#8e44ad;color:#8e44ad">
+    Condition on x&#x2080;<span class="sub">mode 1 &mdash; EASY</span>
+  </button>
+  <button class="cond-btn" id="btn-m1" style="border-color:#1e3a5f;color:#1e3a5f">
+    Condition on x&#x2080;<span class="sub">mode 2 &mdash; EASY</span>
+  </button>
+  <button class="cond-btn" id="btn-m2" style="border-color:#c97a2e;color:#c97a2e">
+    Condition on x&#x2080;<span class="sub">mode 3 &mdash; EASY</span>
+  </button>
+</div>
+
+<canvas id="cv" width="680" height="520"></canvas>
+<div class="note" id="note"></div>
+</div>
+
+<script>
+var DPR=window.devicePixelRatio||1, CW=680, CH=520;
+var T=0.35, condMode=-1;
+var xt={x:0.5,y:0.3}; // draggable probe
+var modes=[{x:-2.2,y:1.5,col:'#8e44ad'},{x:2.0,y:0.8,col:'#1e3a5f'},{x:0,y:-2.0,col:'#c97a2e'}];
+var modeW=[0.35,0.35,0.30];
+var lo=-4.5,hi=4.5;
+
+function postWeights(x,y,t){
+  var sig=Math.max(t,0.01),al=1-t,s2=sig*sig;
+  var lws=modes.map(function(m,i){var dx=x-al*m.x,dy=y-al*m.y;return Math.log(modeW[i])-0.5*(dx*dx+dy*dy)/s2;});
+  var mx=Math.max.apply(null,lws);var ws=lws.map(function(lw){return Math.exp(lw-mx);});
+  var S=ws.reduce(function(a,b){return a+b;},0);
+  return ws.map(function(w){return w/S;});
+}
+
+// Conditional score from mode k: -(x - αₜμ_k)/σₜ²
+function condScoreK(x,y,t,k){
+  var sig=Math.max(t,0.01),al=1-t,s2=sig*sig;
+  return{x:-(x-al*modes[k].x)/s2, y:-(y-al*modes[k].y)/s2};
+}
+
+// Marginal score = Σ_k w_k * condScore_k
+function margScore(x,y,t){
+  var pw=postWeights(x,y,t);
+  var sx=0,sy=0;
+  for(var k=0;k<modes.length;k++){
+    var cs=condScoreK(x,y,t,k);
+    sx+=pw[k]*cs.x; sy+=pw[k]*cs.y;
+  }
+  return{x:sx,y:sy};
+}
+
+function ptDens(x,y,t){
+  var sig=Math.max(t,0.008),s2=sig*sig,d=0;
+  for(var k=0;k<modes.length;k++){
+    var dx=x-(1-t)*modes[k].x,dy=y-(1-t)*modes[k].y;
+    d+=modeW[k]*Math.exp(-0.5*(dx*dx+dy*dy)/s2)/(2*Math.PI*s2);
+  }
+  return d;
+}
+
+function drawArrowFull(ctx,x1,y1,x2,y2,col,w,alpha){
+  var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<3)return;
+  ctx.globalAlpha=alpha;
+  // White outline
+  ctx.strokeStyle='rgba(255,255,255,'+alpha+')';ctx.lineWidth=w+3;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // Shaft
+  ctx.strokeStyle=col;ctx.lineWidth=w;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // Head
+  var ang=Math.atan2(dy,dx),hl=Math.min(12,len*0.35),hw=hl*0.45;
+  var hx1=x2-hl*Math.cos(ang)-hw*Math.cos(ang-Math.PI/2);
+  var hy1=y2-hl*Math.sin(ang)-hw*Math.sin(ang-Math.PI/2);
+  var hx2=x2-hl*Math.cos(ang)+hw*Math.cos(ang-Math.PI/2);
+  var hy2=y2-hl*Math.sin(ang)+hw*Math.sin(ang-Math.PI/2);
+  ctx.strokeStyle='rgba(255,255,255,'+alpha+')';ctx.lineWidth=1.5;ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(hx1,hy1);ctx.lineTo(hx2,hy2);ctx.closePath();ctx.stroke();
+  ctx.fillStyle=col;
+  ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(hx1,hy1);ctx.lineTo(hx2,hy2);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+function drawLabel(ctx,text,x,y,col,align){
+  ctx.font="bold 10px 'IBM Plex Mono',monospace";
+  var m=ctx.measureText(text);var pw=m.width+6,ph=14;
+  var lx=align==='right'?x-pw:align==='center'?x-pw/2:x;
+  ctx.fillStyle='rgba(252,251,249,0.88)';ctx.fillRect(lx,y-ph/2,pw,ph);
+  ctx.fillStyle=col;ctx.textAlign=align||'left';ctx.textBaseline='middle';
+  ctx.fillText(text,align==='right'?x-3:align==='center'?x:x+3,y);
+  ctx.textBaseline='alphabetic';
+}
+
+function draw(){
+  var cv=document.getElementById('cv');
+  cv.width=CW*DPR;cv.height=CH*DPR;cv.style.width=CW+'px';cv.style.height=CH+'px';
+  var ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
+  ctx.fillStyle='#fcfbf9';ctx.fillRect(0,0,CW,CH);
+
+  var pad={l:10,r:10,t:10,b:10};
+  var iW=CW-pad.l-pad.r,iH=CH-pad.t-pad.b;
+  var toX=function(v){return pad.l+((v-lo)/(hi-lo))*iW;};
+  var toY=function(v){return pad.t+iH-((v-lo)/(hi-lo))*iH;};
+  var pxU=iW/(hi-lo);
+  var sig=Math.max(T,0.01),al=1-T;
+  var showAll=condMode===-1;
+
+  // Density heatmap (faint)
+  var res=60,pw2=iW/res,ph2=iH/res;
+  for(var py=0;py<res;py++){for(var px=0;px<res;px++){
+    var xv=lo+(px+0.5)/res*(hi-lo),yv=lo+(1-(py+0.5)/res)*(hi-lo);
+    var d=ptDens(xv,yv,T);
+    var b=Math.pow(Math.min(d*400,1),0.35);
+    ctx.fillStyle='rgba(60,60,60,'+(b*0.12).toFixed(3)+')';
+    ctx.fillRect(pad.l+px*pw2,pad.t+py*ph2,pw2+0.5,ph2+0.5);
+  }}
+
+  // Grid
+  ctx.strokeStyle='rgba(0,0,0,0.04)';ctx.lineWidth=0.5;
+  for(var v=Math.ceil(lo);v<=hi;v++){
+    ctx.beginPath();ctx.moveTo(toX(v),pad.t);ctx.lineTo(toX(v),pad.t+iH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pad.l,toY(v));ctx.lineTo(pad.l+iW,toY(v));ctx.stroke();
+  }
+
+  // Background score field: dense grid, short centered arrows
+  var bgN=11, bgStep=(hi-lo)/(bgN+1);
+  var halfPx=bgStep*0.22*pxU; // short arrows that never touch neighbors
+  for(var iy=1;iy<=bgN;iy++){for(var ix=1;ix<=bgN;ix++){
+    var bx=lo+ix*bgStep, by=lo+iy*bgStep;
+    var bs=showAll?margScore(bx,by,T):condScoreK(bx,by,T,condMode);
+    var bmag=Math.sqrt(bs.x*bs.x+bs.y*bs.y);
+    if(bmag<0.01)continue;
+    // Unit direction
+    var bnx=bs.x/bmag, bny=bs.y/bmag;
+    var cx=toX(bx), cy=toY(by);
+    // Arrow from (center - half) to (center + half), centered on grid point
+    var hdx=bnx*halfPx, hdy=-bny*halfPx;
+    var x1=cx-hdx*0.3, y1=cy-hdy*0.3;
+    var x2=cx+hdx*0.7, y2=cy+hdy*0.7;
+
+    // Opacity encodes magnitude (subtle range)
+    var bAlpha=0.12+0.18*Math.min(bmag*0.4,1);
+    // Color by dominant mode
+    var bCol;
+    if(showAll){
+      var bpw=postWeights(bx,by,T);
+      var bestK=0,bestW=0;
+      for(var k=0;k<modes.length;k++){if(bpw[k]>bestW){bestW=bpw[k];bestK=k;}}
+      bCol=modes[bestK].col;
+    } else {
+      bCol=modes[condMode].col;
+    }
+
+    ctx.globalAlpha=bAlpha;
+    ctx.strokeStyle=bCol;ctx.lineWidth=1.2;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    // Filled triangular head at tip
+    var bang=Math.atan2(y2-y1,x2-x1),bhl=4,bhw=2;
+    ctx.fillStyle=bCol;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-bhl*Math.cos(bang)-bhw*Math.cos(bang-Math.PI/2),
+               y2-bhl*Math.sin(bang)-bhw*Math.sin(bang-Math.PI/2));
+    ctx.lineTo(x2-bhl*Math.cos(bang)+bhw*Math.cos(bang-Math.PI/2),
+               y2-bhl*Math.sin(bang)+bhw*Math.sin(bang-Math.PI/2));
+    ctx.closePath();ctx.fill();
+    ctx.globalAlpha=1;
+  }}
+
+  // Mode markers
+  modes.forEach(function(m,mi){
+    var isActive=showAll||condMode===mi;
+    ctx.globalAlpha=isActive?1:0.12;
+    // Data mode position (the actual x₀ location, not scaled)
+    var dpx=toX(m.x),dpy=toY(m.y);
+    // Where the mode sits at time t (scaled by αₜ)
+    var mpx=toX(al*m.x),mpy=toY(al*m.y);
+
+    // Dashed line from data position to scaled position
+    if(showAll||condMode===mi){
+      ctx.strokeStyle=m.col+'44';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(dpx,dpy);ctx.lineTo(mpx,mpy);ctx.stroke();ctx.setLineDash([]);
+    }
+
+    // Data position (small ×)
+    ctx.strokeStyle=m.col+'66';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(dpx-4,dpy-4);ctx.lineTo(dpx+4,dpy+4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(dpx+4,dpy-4);ctx.lineTo(dpx-4,dpy+4);ctx.stroke();
+
+    // Scaled mode center (filled dot — where conditional score points toward)
+    ctx.fillStyle=m.col;
+    ctx.beginPath();ctx.arc(mpx,mpy,isActive&&!showAll?6:4,0,2*Math.PI);ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.arc(mpx,mpy,isActive&&!showAll?2.5:1.5,0,2*Math.PI);ctx.fill();
+
+    // Simple label at data position
+    if(isActive){
+      ctx.fillStyle=m.col;ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+      ctx.fillText('data '+(mi+1),dpx,dpy-8);
+    }
+
+    ctx.globalAlpha=1;
+  });
+
+  // ═══ Probe point: the main event ═══
+  var xpx=toX(xt.x),xpy=toY(xt.y);
+  var pw=postWeights(xt.x,xt.y,T);
+
+  if(showAll){
+    // ── MARGINAL: show decomposition ──
+    // Each dashed arrow: direction = conditional score, LENGTH = weight × baseLen
+    // So dominant mode has a long arrow, minority mode has a tiny stub
+    var baseLen=70; // max arrow length in pixels (when w=1)
+    for(var k=0;k<modes.length;k++){
+      var cs=condScoreK(xt.x,xt.y,T,k);
+      var cmag=Math.sqrt(cs.x*cs.x+cs.y*cs.y);
+      if(cmag<0.001)continue;
+      // Direction from conditional score, length from weight
+      var ux=cs.x/cmag, uy=cs.y/cmag;
+      var alen=baseLen*pw[k]; // KEY: length encodes weight
+      var dx=ux*alen, dy=-uy*alen;
+      var lw=1.5+2.5*pw[k]; // line width also scales with weight
+
+      // Dashed colored arrow
+      ctx.globalAlpha=0.35+0.55*pw[k];
+      ctx.strokeStyle=modes[k].col;ctx.lineWidth=lw;ctx.setLineDash([5,4]);ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(xpx,xpy);ctx.lineTo(xpx+dx,xpy+dy);ctx.stroke();
+      ctx.setLineDash([]);
+      // Arrowhead (size also scales)
+      var ang=Math.atan2(dy,dx),hl=4+5*pw[k],hw=hl*0.4;
+      ctx.fillStyle=modes[k].col;
+      ctx.beginPath();ctx.moveTo(xpx+dx,xpy+dy);
+      ctx.lineTo(xpx+dx-hl*Math.cos(ang)-hw*Math.cos(ang-Math.PI/2),xpy+dy-hl*Math.sin(ang)-hw*Math.sin(ang-Math.PI/2));
+      ctx.lineTo(xpx+dx-hl*Math.cos(ang)+hw*Math.cos(ang-Math.PI/2),xpy+dy-hl*Math.sin(ang)+hw*Math.sin(ang-Math.PI/2));
+      ctx.closePath();ctx.fill();
+      ctx.globalAlpha=1;
+    }
+
+    // Marginal score = weighted sum (thick black arrow)
+    var ms=margScore(xt.x,xt.y,T);
+    var mmag=Math.sqrt(ms.x*ms.x+ms.y*ms.y);
+    if(mmag>0.001){
+      var mux=ms.x/mmag,muy=ms.y/mmag;
+      // Length = same baseLen but for the actual marginal magnitude relative to max conditional
+      var maxCmag=0;
+      for(var k=0;k<modes.length;k++){
+        var cs=condScoreK(xt.x,xt.y,T,k);
+        var cm2=Math.sqrt(cs.x*cs.x+cs.y*cs.y);if(cm2>maxCmag)maxCmag=cm2;
+      }
+      var mLen=baseLen*mmag/Math.max(maxCmag,0.01);
+      mLen=Math.min(mLen,baseLen);
+      var mdx=mux*mLen, mdy=-muy*mLen;
+      drawArrowFull(ctx,xpx,xpy,xpx+mdx,xpy+mdy,'#333',3.5,1);
+    }
+
+  } else {
+    // ── CONDITIONED: one simple arrow ──
+    var cs=condScoreK(xt.x,xt.y,T,condMode);
+    var cmag=Math.sqrt(cs.x*cs.x+cs.y*cs.y);
+    if(cmag>0.001){
+      var ux=cs.x/cmag, uy=cs.y/cmag;
+      var cLen=60; // fixed visible length
+      var dx=ux*cLen, dy=-uy*cLen;
+      drawArrowFull(ctx,xpx,xpy,xpx+dx,xpy+dy,modes[condMode].col,3.5,1);
+    }
+  }
+
+  // xₜ probe dot (on top)
+  ctx.fillStyle='#fff';ctx.strokeStyle='#333';ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(xpx,xpy,11,0,2*Math.PI);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#333';ctx.beginPath();ctx.arc(xpx,xpy,5,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle='#333';ctx.font="bold 12px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+  ctx.fillText('x\u209C (drag me)',xpx+16,xpy+5);
+
+  // Status (fixed position, top of canvas)
+  if(showAll){
+    ctx.fillStyle='#c23616';ctx.font="bold 15px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+    ctx.fillText('HARD: marginal score = sum over all data',14,26);
+    ctx.fillStyle='#888';ctx.font="10px 'IBM Plex Mono',monospace";
+    ctx.fillText('colored dashed = pull from each mode | black = their weighted sum',14,42);
+    // Weights at fixed position below
+    var wy=58;
+    for(var k=0;k<modes.length;k++){
+      ctx.fillStyle=modes[k].col;ctx.font="bold 11px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+      ctx.fillText('w'+(k+1)+' = '+pw[k].toFixed(2),14+k*110,wy);
+    }
+    ctx.fillStyle='#c23616';ctx.font="bold 10px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+    ctx.fillText('\u2207log p\u209C = \u03A3\u2096 w\u2096 \u00B7 score\u2096   (must sum over ALL data!)',14,wy+16);
+  } else {
+    ctx.fillStyle='#2d6a4f';ctx.font="bold 15px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+    ctx.fillText('EASY: conditional score = closed-form arrow',14,26);
+    ctx.fillStyle='#888';ctx.font="10px 'IBM Plex Mono',monospace";
+    ctx.fillText('one arrow: \u2207log p(x\u209C | x\u2080) = \u2212(x\u209C \u2212 \u03B1\u209Cx\u2080) / \u03C3\u209C\u00B2',14,42);
+  }
+
+  // Note
+  var el=document.getElementById('note');
+  if(showAll){
+    el.innerHTML='<strong style="color:#c23616">Why score matching is hard:</strong> to compute \u2207log p\u209C at the probe point x\u209C, we must sum the conditional score \u2212(x\u209C\u2212\u03B1\u209C\u03BC\u2096)/\u03C3\u00B2 from <em>every</em> data point \u03BC\u2096, weighted by how likely each one is. With 3 modes that\'s 3 arrows to combine \u2014 but with millions of real images, this sum is <em>intractable</em>. We\u2019d need to know the full density p\u209C. <strong>Drag x\u209C</strong> to see the weights shift as you move between modes. Then <strong>click \u201CCondition\u201D</strong> to see the fix.';
+  } else {
+    el.innerHTML='<strong style="color:#2d6a4f">Denoising score matching fixes this:</strong> given a known x\u2080, the conditional score is just \u2212(x\u209C \u2212 \u03B1\u209Cx\u2080)/\u03C3\u209C\u00B2 \u2014 one closed-form arrow pointing toward \u03B1\u209Cx\u2080. No summation over data. During training, each random (x\u2080, x\u209C) pair gives this trivial target. A key theorem says: minimizing the conditional score error over random pairs gives the <em>same optimum</em> as matching the intractable marginal score. Same trick as DDPM, applied to the score. <strong>Click \u201CMarginal\u201D</strong> to see the hard version again.';
+  }
+}
+
+// Controls
+function updateBtns(){
+  ['btn-all','btn-m0','btn-m1','btn-m2'].forEach(function(id,i){
+    document.getElementById(id).className='cond-btn'+((condMode===-1&&i===0)||(condMode===i-1&&i>0)?' on':'');
+  });
+}
+document.getElementById('btn-all').onclick=function(){condMode=-1;updateBtns();draw();};
+document.getElementById('btn-m0').onclick=function(){condMode=0;updateBtns();draw();};
+document.getElementById('btn-m1').onclick=function(){condMode=1;updateBtns();draw();};
+document.getElementById('btn-m2').onclick=function(){condMode=2;updateBtns();draw();};
+document.getElementById('t-slider').oninput=function(e){
+  T=parseFloat(e.target.value);document.getElementById('t-val').textContent=T.toFixed(2);draw();
+};
+
+// Drag
+var dragging=false,cvEl=document.getElementById('cv');
+function mv(e){
+  var r=cvEl.getBoundingClientRect(),sx=CW/r.width,sy=CH/r.height;
+  xt.x=lo+((e.clientX-r.left)*sx-10)/(CW-20)*(hi-lo);
+  xt.y=lo+(1-((e.clientY-r.top)*sy-10)/(CH-20))*(hi-lo);
+  xt.x=Math.max(lo+.5,Math.min(hi-.5,xt.x));
+  xt.y=Math.max(lo+.5,Math.min(hi-.5,xt.y));
+  draw();
+}
+cvEl.addEventListener('mousedown',function(e){dragging=true;mv(e);});
+cvEl.addEventListener('mousemove',function(e){if(dragging)mv(e);});
+cvEl.addEventListener('mouseup',function(){dragging=false;});
+cvEl.addEventListener('mouseleave',function(){dragging=false;});
+cvEl.addEventListener('touchstart',function(e){dragging=true;mv(e.touches[0]);e.preventDefault();});
+cvEl.addEventListener('touchmove',function(e){if(dragging)mv(e.touches[0]);e.preventDefault();});
+cvEl.addEventListener('touchend',function(){dragging=false;});
+
+draw();
+</script>
+</body></html>
