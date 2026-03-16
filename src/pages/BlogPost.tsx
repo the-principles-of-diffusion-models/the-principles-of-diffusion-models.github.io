@@ -558,6 +558,16 @@ export default function BlogPost() {
                 <BlockMath math="\mathbb{E}_{t}\,\mathbb{E}_{\mathbf{x}_t\sim p_t} \Big[ \lambda(t)\, \big\| \mathbf{s}_\theta(\mathbf{x}_t,t) - \nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t) \big\|_2^2 \Big] = \mathbb{E}_{t}\,\mathbb{E}_{\mathbf{x}_0\sim p_{\text{data}}}\,\mathbb{E}_{\mathbf{x}_t\sim p(\cdot\mid \mathbf{x}_0)} \Big[ \lambda(t)\, \big\| \mathbf{s}_\theta(\mathbf{x}_t,t) -\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t\mid \mathbf{x}_0) \big\|_2^2 \Big] + C." />
               </div>
 
+              <div className="my-6">
+                <iframe
+                  src="/assets/denoising_score_matching.html"
+                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+                  height="820"
+                  loading="lazy"
+                  title="Noise Schedule Explorer"
+                />
+              </div>
+              
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Once the score network <InlineMath math="\mathbf{s}_\theta" /> has been learned, it can be plugged back into the reverse-time dynamics for generation. One option is to sample from the <em>reverse-time SDE</em> itself. A particularly clean alternative is the <em>probability-flow ODE (PF-ODE)</em>, which gives a <em>deterministic</em> trajectory from noise to data:
               </p>
@@ -1605,4 +1615,5 @@ export default function BlogPost() {
     </div>
   );
 }
+
 
