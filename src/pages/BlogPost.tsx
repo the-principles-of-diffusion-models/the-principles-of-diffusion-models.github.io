@@ -57,7 +57,7 @@ export default function BlogPost() {
               </p>
 
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                In what follows, we slow the story down and keep a single guiding thread:
+                In what follows, we extract the key principles behind the development of diffusion models, slow the story down, and maintain a single guiding thread throughout:
               </p>
 
               <blockquote className="border-l-4 border-orange-400 dark:border-orange-300 pl-6 italic text-xl text-slate-700 dark:text-slate-300 my-6">
@@ -69,7 +69,7 @@ export default function BlogPost() {
               </p>
 
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
-                We start with three common lenses on diffusion, <em>DDPM</em>, <em>score-based methods</em>, and <em>flow matching/rectified flow</em>. They share the same recipe: fix a simple <em>forward Gaussian noising process</em>, then learn to reverse it. The main difference is <em>what the network predicts</em>, such as noise, score, or velocity.
+                We start with three common lenses on diffusion, <em>variational-based methods</em> (e.g., DDPM), <em>score-based methods</em> (e.g., Score-SDE), and <em>flow-based methods</em> (e.g., flow matching / rectified flow). They share the same recipe: fix a simple <em>forward Gaussian noising process</em>, then learn to reverse it. The main difference is <em>what the network predicts</em>, such as noise, score, or velocity.
               </p>
 
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -297,7 +297,7 @@ export default function BlogPost() {
 
               {/* ===== DDPM ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
-                DDPM: Predicting the Reverse Step via Noise or Mean
+                Variational-Based Methods (e.g., DDPM): Predicting the Reverse Step via Noise or Mean
               </h4>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
@@ -622,7 +622,7 @@ export default function BlogPost() {
 
               {/* ===== FLOW MATCHING ===== */}
               <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mt-6 mb-3">
-                Flow Matching: Predict the Velocity
+                Flow-Based Method (e.g., Flow Matching): Predict the Velocity
               </h4>
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
