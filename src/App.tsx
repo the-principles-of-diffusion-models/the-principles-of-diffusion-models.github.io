@@ -6,6 +6,7 @@ import ReadOnline from './pages/ReadOnline';
 import Publisher from './pages/Publisher';
 import TeachingGuide from './pages/TeachingGuide';
 import Errata from './pages/Errata';
+import Codes from './pages/Codes';
 import { trackVisitor } from './lib/visitorTracking';
 
 function App() {
@@ -22,11 +23,10 @@ function App() {
         <Route path="/publisher" element={<Publisher />} />
         <Route path="/teaching" element={<TeachingGuide />} />
         <Route path="/errata" element={<Errata />} />
+        <Route path="/codes" element={<Codes />} />
       </Routes>
     </HashRouter>
   );
 }
 
 export default App;
-
-
