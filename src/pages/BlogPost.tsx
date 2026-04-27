@@ -106,13 +106,17 @@ export default function BlogPost() {
             <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">
               Tracing the Principles Behind Modern Diffusion Models
             </h1>
-            <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed">
-              Diffusion models can feel like a jungle of acronyms, but the core idea is simple: start from noise and gradually move a cloud of samples until it looks like real data. This post gives an intuition-first tour showing that DDPMs, score-based models, and flow matching are the same recipe with different prediction targets, all rooted in the change-of-variable rule from calculus and powered by one shared "conditional trick" that turns learning into supervised regression. Finally, we zoom out to the speed problem and show how flow map models aim to replace many tiny denoising steps with a few big, accurate jumps toward real-time generation.
+            
+            <OfficialBlogpostCitation />
+            
+            <p className="mt-8 text-xl text-slate-600 dark:text-slate-300 leading-relaxed">
+              Diffusion models can feel like a jungle of acronyms, but the core idea is simple: start from noise and gradually move a cloud of samples until it looks like real data. This post gives an intuition-first tour showing that DDPMs, score-based models, and flow matching are the same recipe with different prediction targets, all rooted in the change-of-variable rule from calculus and powered by one shared "conditional trick" that turns learning into supervised regression.
+              Finally, we zoom out to the speed problem and show how flow map models aim to replace many tiny denoising steps with a few big, accurate jumps toward real-time generation.
             </p>
+            
             <div className="mt-6 text-sm text-slate-500 dark:text-slate-400">
               <p>Date: April 27, 2026</p>
             </div>
-            <OfficialBlogpostCitation />
           </header>
 
           <div className="space-y-8">
