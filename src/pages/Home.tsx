@@ -235,8 +235,8 @@ const tabsRow2: Tab[] = [
     id: 'codes',
     label: 'Codes',
     icon: Code,
-    type: 'external',
-    url: 'https://github.com/the-principles-of-diffusion-models/codes-demos/',
+    type: 'internal',
+    path: '/codes',
   },
   {
     id: 'errata',
@@ -253,7 +253,6 @@ const tabsRow2: Tab[] = [
     path: '/publisher',
   },
 ];
-
 
   
   const handleTabClick = (tab: Tab) => {
