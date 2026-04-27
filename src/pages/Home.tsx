@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { TouchEvent } from 'react';
 import {
   ExternalLink,
-  BookOpen,
+  Code,
   FileText,
   GraduationCap,
   Copy,
@@ -230,30 +230,32 @@ export default function Home() {
     },
   ];
 
-  const tabsRow2: Tab[] = [
-    {
-      id: 'errata',
-      label: 'Errata',
-      icon: FileWarning,
-      type: 'internal',
-      path: '/errata',
-    },
-    {
-      id: 'read-online',
-      label: 'Read Online',
-      icon: BookOpen,
-      type: 'internal',
-      path: '/read-online',
-    },
-    {
-      id: 'publisher',
-      label: 'Publisher Version',
-      icon: ExternalLink,
-      type: 'internal',
-      path: '/publisher',
-    },
-  ];
+const tabsRow2: Tab[] = [
+  {
+    id: 'codes',
+    label: 'Codes',
+    icon: Code,
+    type: 'external',
+    url: 'https://github.com/the-principles-of-diffusion-models/codes-demos/',
+  },
+  {
+    id: 'errata',
+    label: 'Errata',
+    icon: FileWarning,
+    type: 'internal',
+    path: '/errata',
+  },
+  {
+    id: 'publisher',
+    label: 'Publisher Version',
+    icon: ExternalLink,
+    type: 'internal',
+    path: '/publisher',
+  },
+];
 
+
+  
   const handleTabClick = (tab: Tab) => {
     if (tab.type === 'external' && tab.url) {
       window.open(tab.url, '_blank', 'noopener,noreferrer');
