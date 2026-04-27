@@ -21,19 +21,21 @@ const iclrBibTeX = String.raw`@inproceedings{lai2026tracingtheprinciples,
 
 function OfficialBlogpostCitation() {
   return (
-    <div className="not-prose mt-8 overflow-hidden rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 via-white to-amber-50 shadow-sm dark:border-orange-900/60 dark:from-orange-950/20 dark:via-slate-900 dark:to-amber-950/20">
+    <div className="not-prose mt-6 mb-8 overflow-hidden rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 via-white to-amber-50 shadow-sm dark:border-orange-900/60 dark:from-orange-950/20 dark:via-slate-900 dark:to-amber-950/20">
       <div className="border-b border-orange-100 px-5 py-4 dark:border-orange-900/50 sm:px-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-orange-700 dark:bg-orange-900/50 dark:text-orange-200">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-orange-700 dark:bg-orange-900/50 dark:text-orange-200">
               <FileText className="h-3.5 w-3.5" />
-              Official ICLR Blogpost
+              Official ICLR Blogposts 2026 version
             </div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Cite the ICLR Blogposts 2026 version
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-              The official version of this article is published in the ICLR Blogposts 2026 track.
+
+            <p className="text-base leading-relaxed text-slate-700 dark:text-slate-200">
+              The official version of this article appears in the{" "}
+              <span className="font-semibold text-slate-900 dark:text-white">
+                ICLR Blogposts 2026
+              </span>{" "}
+              track.
             </p>
           </div>
 
@@ -67,7 +69,6 @@ function OfficialBlogpostCitation() {
     </div>
   );
 }
-
 
 export default function BlogPost() {
   return (
