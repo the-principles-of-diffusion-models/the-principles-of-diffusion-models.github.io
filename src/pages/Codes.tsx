@@ -16,6 +16,28 @@ type CodeNotebook = {
 
 const notebooks: CodeNotebook[] = [
   {
+    part: 'Part B: Origins and Foundations of Diffusion Models',
+    title: 'Diffusion Models Tutorial',
+    description:
+      'A hands-on tutorial introducing the core mechanics of diffusion models, from forward noising and denoising to training and sampling with minimal educational code.',
+    githubUrl:
+      'https://github.com/the-principles-of-diffusion-models/codes-demos/blob/main/Part-B/diffusion_tutorial.ipynb',
+    colabUrl:
+      'https://colab.research.google.com/github/the-principles-of-diffusion-models/codes-demos/blob/main/Part-B/diffusion_tutorial.ipynb',
+    status: 'New',
+  },
+  {
+    part: 'Part B: Origins and Foundations of Diffusion Models',
+    title: 'Rectified Flow Tutorial',
+    description:
+      'A runnable tutorial on Rectified Flow and Reflow, illustrating how ODE flow-map trajectories can be strengthened by repeatedly straightening transport paths.',
+    githubUrl:
+      'https://github.com/the-principles-of-diffusion-models/codes-demos/blob/main/Part-B/rectified_flow_tutorial.ipynb',
+    colabUrl:
+      'https://colab.research.google.com/github/the-principles-of-diffusion-models/codes-demos/blob/main/Part-B/rectified_flow_tutorial.ipynb',
+    status: 'New',
+  },
+  {
     part: 'Part D: Toward Learning Fast Diffusion-Based Generators',
     title: 'Flow Map Tutorial',
     description:
