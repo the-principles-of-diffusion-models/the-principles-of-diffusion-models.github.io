@@ -39,19 +39,35 @@ function slugify(text: string) {
 }
 
 function getBlogAnchorHref(id: string) {
-  return `#/blog#${encodeURIComponent(id)}`;
+  return `#/blog?panel=${encodeURIComponent(id)}`;
 }
 
 function getCurrentBlogAnchor() {
   if (typeof window === 'undefined') return '';
 
-  const marker = '#/blog#';
   const hash = window.location.hash;
-  const index = hash.indexOf(marker);
 
-  if (index === -1) return '';
+  // Preferred PowerPoint-safe format:
+  // https://.../#/blog?panel=interactive-score-landscape
+  const queryIndex = hash.indexOf('?');
 
-  return decodeURIComponent(hash.slice(index + marker.length));
+  if (queryIndex !== -1) {
+    const params = new URLSearchParams(hash.slice(queryIndex + 1));
+    const panel = params.get('panel');
+
+    if (panel) return panel;
+  }
+
+  // Backward compatibility with the old browser-only format:
+  // https://.../#/blog#interactive-score-landscape
+  const legacyMarker = '#/blog#';
+  const legacyIndex = hash.indexOf(legacyMarker);
+
+  if (legacyIndex !== -1) {
+    return decodeURIComponent(hash.slice(legacyIndex + legacyMarker.length));
+  }
+
+  return '';
 }
 
 function scrollToBlogAnchor(id: string, behavior: ScrollBehavior = 'smooth') {
@@ -130,7 +146,8 @@ function useBlogToc() {
 
         while (
           usedIds.has(id) ||
-          (document.getElementById(id) && document.getElementById(id) !== element)
+          (document.getElementById(id) &&
+            document.getElementById(id) !== element)
         ) {
           id = `${baseId}-${suffix}`;
           suffix += 1;
@@ -144,10 +161,7 @@ function useBlogToc() {
           id,
           title,
           level,
-          kind:
-            element.dataset.tocKind === 'interactive'
-              ? 'interactive'
-              : 'heading',
+          kind: element.dataset.tocKind === 'interactive' ? 'interactive' : 'heading',
         });
       });
 
@@ -262,7 +276,7 @@ function BlogTableOfContents({
               >
                 <span className="flex items-start gap-1.5">
                   {item.kind === 'interactive' && (
-                    <span className="mt-0.5 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
+                    <span className="mt-0.5 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-600 dark:border-orange-900/60 dark:bg-orange-950/30 dark:text-orange-300">
                       Panel
                     </span>
                   )}
