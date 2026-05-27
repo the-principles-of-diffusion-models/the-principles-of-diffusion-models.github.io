@@ -240,7 +240,7 @@ const tabsRow2: Tab[] = [
   },
   {
     id: 'errata',
-    label: 'Errata',
+    label: 'Update & Errata',
     icon: FileWarning,
     type: 'internal',
     path: '/errata',
@@ -628,13 +628,41 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-orange-500">
               <div className="flex items-start justify-between mb-2">
                 <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
-                  Coming Soon...
+                  Coming Soon from MIT Press, 2027
                 </span>
               </div>
               <p className="text-slate-700 dark:text-slate-300">
-                Publisher for physical print version is currently being sorted out. Stay tuned for updates on availability.
+                The physical print edition will be published by <strong>MIT Press</strong>. Stay tuned for availability and ordering details.
               </p>
             </div>
+            
+            <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4 border-l-4 border-violet-500">
+              <div className="flex items-start justify-between mb-2">
+                <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">
+                  2026/05/27
+                </span>
+              </div>
+            
+              <p className="text-slate-700 dark:text-slate-300">
+                Version 2 of our book is now available on{" "}
+                <a
+                  href="https://arxiv.org/abs/2510.21890"
+                  className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 underline underline-offset-2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  arXiv
+                </a>
+                . It incorporates community-reported errata — thank you! — and adds a walkthrough showing how the book&apos;s core principles extend to discrete diffusion. See{" "}
+                <a
+                  href="https://the-principles-of-diffusion-models.github.io/#/errata"
+                  className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 underline underline-offset-2"
+                >
+                  Update &amp; Errata
+                </a>
+                {" "}for details.
+              </p>
+            </div>            
 
             <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4 border-l-4 border-violet-500">
               <div className="flex items-start justify-between mb-2">
