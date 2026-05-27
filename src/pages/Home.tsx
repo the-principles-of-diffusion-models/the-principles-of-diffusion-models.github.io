@@ -632,7 +632,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
                 </span>
               </div>
               <p className="text-slate-700 dark:text-slate-300">
-                The physical print edition will be published by <strong>MIT Press</strong>. Stay tuned for availability and ordering details.
+                The physical print edition will be published by <strong>MIT Press</strong>, 2027. Stay tuned for availability and more details.
               </p>
             </div>
             
