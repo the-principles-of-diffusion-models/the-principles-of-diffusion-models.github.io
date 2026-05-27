@@ -20,6 +20,314 @@ const iclrBibTeX = String.raw`@inproceedings{lai2026tracingtheprinciples,
   url  = {https://iclr-blogposts.github.io/2026/blog/2026/tracing-principles-behind-modern-diffusion-models/}
 }`;
 
+type TocItem = {
+  id: string;
+  title: string;
+  level: number;
+  kind: 'heading' | 'interactive';
+};
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 80);
+}
+
+function getBlogAnchorHref(id: string) {
+  return `#/blog#${encodeURIComponent(id)}`;
+}
+
+function getCurrentBlogAnchor() {
+  if (typeof window === 'undefined') return '';
+
+  const marker = '#/blog#';
+  const hash = window.location.hash;
+  const index = hash.indexOf(marker);
+
+  if (index === -1) return '';
+
+  return decodeURIComponent(hash.slice(index + marker.length));
+}
+
+function scrollToBlogAnchor(id: string, behavior: ScrollBehavior = 'smooth') {
+  const element = document.getElementById(id);
+
+  if (!element) return;
+
+  element.scrollIntoView({
+    behavior,
+    block: 'start',
+  });
+}
+
+function updateBlogAnchor(id: string, behavior: ScrollBehavior = 'smooth') {
+  if (typeof window !== 'undefined') {
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${window.location.search}${getBlogAnchorHref(id)}`,
+    );
+  }
+
+  scrollToBlogAnchor(id, behavior);
+}
+
+function handleBlogAnchorClick(
+  event: MouseEvent<HTMLAnchorElement>,
+  id: string,
+) {
+  event.preventDefault();
+  updateBlogAnchor(id);
+}
+
+function useBlogToc() {
+  const [tocItems, setTocItems] = useState<TocItem[]>([]);
+  const [activeId, setActiveId] = useState('');
+
+  useEffect(() => {
+    const collectTocItems = () => {
+      const article = document.querySelector<HTMLElement>(
+        'article[data-blog-post="true"]',
+      );
+
+      if (!article) return;
+
+      const usedIds = new Set<string>();
+      const elements = Array.from(
+        article.querySelectorAll<HTMLElement>(
+          'h2, h3, h4, h5, [data-toc-title]',
+        ),
+      );
+
+      const nextItems: TocItem[] = [];
+
+      elements.forEach((element) => {
+        const title = (element.dataset.tocTitle || element.textContent || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (!title) return;
+
+        const tagName = element.tagName.toLowerCase();
+        const level =
+          Number(element.dataset.tocLevel) ||
+          (tagName === 'h2'
+            ? 2
+            : tagName === 'h3'
+              ? 3
+              : tagName === 'h4'
+                ? 4
+                : 5);
+
+        const baseId = element.id || slugify(title);
+        let id = baseId;
+        let suffix = 2;
+
+        while (
+          usedIds.has(id) ||
+          (document.getElementById(id) && document.getElementById(id) !== element)
+        ) {
+          id = `${baseId}-${suffix}`;
+          suffix += 1;
+        }
+
+        element.id = id;
+        element.classList.add('scroll-mt-24');
+        usedIds.add(id);
+
+        nextItems.push({
+          id,
+          title,
+          level,
+          kind:
+            element.dataset.tocKind === 'interactive'
+              ? 'interactive'
+              : 'heading',
+        });
+      });
+
+      setTocItems(nextItems);
+      setActiveId((current) => current || nextItems[0]?.id || '');
+    };
+
+    const timeout = window.setTimeout(() => {
+      collectTocItems();
+
+      const anchorId = getCurrentBlogAnchor();
+
+      if (anchorId) {
+        window.setTimeout(() => scrollToBlogAnchor(anchorId, 'auto'), 100);
+      }
+    }, 0);
+
+    const handleHashChange = () => {
+      const anchorId = getCurrentBlogAnchor();
+
+      if (anchorId) {
+        window.setTimeout(() => scrollToBlogAnchor(anchorId), 0);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (tocItems.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntries = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort(
+            (a, b) =>
+              Math.abs(a.boundingClientRect.top) -
+              Math.abs(b.boundingClientRect.top),
+          );
+
+        const firstVisible = visibleEntries[0];
+
+        if (firstVisible?.target instanceof HTMLElement) {
+          setActiveId(firstVisible.target.id);
+        }
+      },
+      {
+        rootMargin: '-18% 0px -70% 0px',
+        threshold: 0.01,
+      },
+    );
+
+    tocItems.forEach((item) => {
+      const element = document.getElementById(item.id);
+
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, [tocItems]);
+
+  return { tocItems, activeId };
+}
+
+function BlogTableOfContents({
+  items,
+  activeId,
+}: {
+  items: TocItem[];
+  activeId: string;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <aside className="hidden xl:block">
+      <nav className="sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/80">
+        <div className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <List className="h-4 w-4" />
+          Contents
+        </div>
+
+        <div className="space-y-1">
+          {items.map((item) => {
+            const isActive = item.id === activeId;
+            const indentClass =
+              item.level <= 2
+                ? 'pl-2'
+                : item.level === 3
+                  ? 'pl-5'
+                  : item.level === 4
+                    ? 'pl-8'
+                    : 'pl-11';
+
+            return (
+              <a
+                key={item.id}
+                href={getBlogAnchorHref(item.id)}
+                onClick={(event) => handleBlogAnchorClick(event, item.id)}
+                className={[
+                  'block rounded-lg py-1.5 pr-2 text-sm leading-snug transition-colors',
+                  indentClass,
+                  isActive
+                    ? 'bg-orange-50 font-semibold text-orange-600 dark:bg-orange-950/30 dark:text-orange-300'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+                ].join(' ')}
+              >
+                <span className="flex items-start gap-1.5">
+                  {item.kind === 'interactive' && (
+                    <span className="mt-0.5 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
+                      Panel
+                    </span>
+                  )}
+                  <span>{item.title}</span>
+                </span>
+              </a>
+            );
+          })}
+        </div>
+      </nav>
+    </aside>
+  );
+}
+
+function InteractivePanel({
+  id,
+  title,
+  src,
+  height,
+}: {
+  id: string;
+  title: string;
+  src: string;
+  height: number | string;
+}) {
+  return (
+    <div
+      id={id}
+      data-toc-title={title}
+      data-toc-level="4"
+      data-toc-kind="interactive"
+      className="not-prose my-6 scroll-mt-24 overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
+    >
+      <div className="flex flex-col gap-3 border-b border-orange-100 bg-orange-50/70 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-xs font-bold uppercase tracking-wide text-orange-600 dark:text-orange-300">
+            Interactive panel
+          </div>
+          <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            {title}
+          </div>
+        </div>
+
+        <a
+          href={getBlogAnchorHref(id)}
+          onClick={(event) => handleBlogAnchorClick(event, id)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-1.5 text-xs font-semibold text-orange-600 shadow-sm transition hover:border-orange-300 hover:text-orange-700 dark:border-slate-600 dark:bg-slate-900 dark:text-orange-300 dark:hover:border-slate-500 dark:hover:text-orange-200"
+          aria-label={`Direct link to ${title}`}
+        >
+          <Link2 className="h-3.5 w-3.5" />
+          Direct link
+        </a>
+      </div>
+
+      <iframe
+        src={src}
+        style={{ width: '100%', border: 'none', borderRadius: '3px' }}
+        height={height}
+        loading="lazy"
+        title={title}
+      />
+    </div>
+  );
+}
+
 function OfficialBlogpostCitation() {
   return (
     <div className="not-prose mt-6 mb-8 overflow-hidden rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 via-white to-amber-50 shadow-sm dark:border-orange-900/60 dark:from-orange-950/20 dark:via-slate-900 dark:to-amber-950/20">
@@ -72,10 +380,12 @@ function OfficialBlogpostCitation() {
 }
 
 export default function BlogPost() {
+  const { tocItems, activeId } = useBlogToc();
+
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900">
       <DarkModeToggle />
-      <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <Link
           to="/"
           onClick={() => sessionStorage.setItem('scrollToTab', 'blog')}
@@ -85,7 +395,13 @@ export default function BlogPost() {
           Back to Home
         </Link>
 
-        <article className="prose prose-lg prose-slate max-w-none">
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[17rem_minmax(0,1fr)]">
+          <BlogTableOfContents items={tocItems} activeId={activeId} />
+
+          <article
+            data-blog-post="true"
+            className="prose prose-lg prose-slate max-w-4xl min-w-0 xl:col-start-2"
+          >
           <header className="mb-12 pb-8 border-b border-slate-200 dark:border-slate-700">
             <div className="mb-8">
               <span
@@ -317,15 +633,12 @@ export default function BlogPost() {
                 Despite these different conventions, the forward rule is always the same one-liner, <InlineMath math="\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol{\epsilon}" />, and only the shapes of the <InlineMath math="(\alpha_t, \sigma_t)" /> curves differ. The interactive panel below lets you compare these schedules side by side and see how each one progressively corrupts the same image.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/noise_schedule_explorer.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="820"
-                  loading="lazy"
-                  title="Noise Schedule Explorer"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-noise-schedule-explorer"
+                title="Noise Schedule Explorer"
+                src="/assets/noise_schedule_explorer.html"
+                height={820}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 With this forward perturbation, we can view the data distribution as being "blurred" over time. The resulting time-dependent marginal density is
@@ -431,15 +744,12 @@ export default function BlogPost() {
                 In words: instead of matching the unknown mixture <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t)" /> directly, we match the much simpler <em>Gaussian conditional</em> <InlineMath math="p(\mathbf{x}_{t-1}\mid \mathbf{x}_t,\mathbf{x}_0)" /> for random training examples <InlineMath math="\mathbf{x}_0" />. This new target is fully tractable, yet it is still equivalent to the original KL objective up to a constant.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/ddpm_conditional_trick.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="580"
-                  loading="lazy"
-                  title="DDPM Conditional Trick"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-ddpm-conditional-trick"
+                title="DDPM Conditional Trick"
+                src="/assets/ddpm_conditional_trick.html"
+                height={580}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 This conditional trick is one of the most important recurring ideas in diffusion-type models. It will show up again in score-based SDEs and in flow matching / rectified flow: in each case, conditioning on <InlineMath math="\mathbf{x}_0" /> turns an intractable object into a regression target we can actually learn.
@@ -499,15 +809,12 @@ export default function BlogPost() {
                 Intuitively, the network sees a noisy sample <InlineMath math="\mathbf{x}_t" /> together with its noise level <InlineMath math="t" />, and learns to answer: "<em>What noise was added to create this sample?</em>" But the same learning problem can also be written in an equivalent clean-prediction form. From that viewpoint, the question becomes: "<em>Given this noisy observation, what is the best estimate of the clean sample from which it was constructed?</em>"
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/ddpm_prediction_equiv.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="580"
-                  loading="lazy"
-                  title="DDPM Prediction Equivalences"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-ddpm-prediction-equivalences"
+                title="DDPM Prediction Equivalences"
+                src="/assets/ddpm_prediction_equiv.html"
+                height={580}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 At sampling time, we start from the terminal Gaussian state <InlineMath math="p_T" />, which in standard DDPM is chosen to be close to <InlineMath math="\mathcal{N}(\mathbf{0},\mathbf{I})" />. Then, at each reverse step, we predict the noise <InlineMath math="\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,t)" />, convert it into a clean-image estimate <InlineMath math="\widehat{\mathbf{x}}_0" />, use the closed-form reverse formula to obtain the Gaussian mean <InlineMath math="\boldsymbol{\mu}_\theta(\mathbf{x}_t,t)" />, and sample <InlineMath math="\mathbf{x}_{t-1}" />. Repeating this from <InlineMath math="t=T" /> down to <InlineMath math="t=1" /> gradually turns Gaussian noise into a clean sample <InlineMath math="\mathbf{x}_0" />.
@@ -545,15 +852,12 @@ export default function BlogPost() {
                 where <InlineMath math="p_t" /> is the marginal density of noisy samples at time <InlineMath math="t" />. Intuitively, the score is a local arrow field: at each point <InlineMath math="\mathbf{x}" />, it points toward directions where samples are more likely under <InlineMath math="p_t" />.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/score_landscape.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="580"
-                  loading="lazy"
-                  title="Score Landscape"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-score-landscape"
+                title="Score Landscape"
+                src="/assets/score_landscape.html"
+                height={580}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 To see why this object appears so naturally, it is helpful to start from the continuous-time view originally proposed in <em>Score-SDE</em>. Earlier, we described the forward perturbation globally through <InlineMath math="\mathbf{x}_t=\alpha_t\mathbf{x}_0+\sigma_t\boldsymbol{\epsilon}" />. This expression summarizes the <em>accumulated</em> effect of noising up to time <InlineMath math="t" />: part of the original signal is retained through <InlineMath math="\alpha_t" />, while Gaussian noise is injected with total scale <InlineMath math="\sigma_t" />.
@@ -585,15 +889,12 @@ export default function BlogPost() {
                 So the global perturbation formula <InlineMath math="\mathbf{x}_t=\alpha_t\mathbf{x}_0+\sigma_t\boldsymbol{\epsilon}" /> and the local SDE description are just two equivalent views of the same forward noising process: one records the total effect up to time <InlineMath math="t" />, while the other records what happens moment by moment.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/score_global_vs_local.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="580"
-                  loading="lazy"
-                  title="Global vs Local View"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-global-vs-local-view"
+                title="Global vs Local View"
+                src="/assets/score_global_vs_local.html"
+                height={580}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Once this forward process is fixed, it anchors the whole family of noisy marginals <InlineMath math="p_t" />. A classical result of Anderson, later brought into diffusion modeling by Score-SDE, shows that there is a corresponding <em>reverse-time SDE</em> that moves from noise back to data:
@@ -629,15 +930,12 @@ export default function BlogPost() {
                 <BlockMath math="\mathbb{E}_{t}\,\mathbb{E}_{\mathbf{x}_t\sim p_t} \Big[ \lambda(t)\, \big\| \mathbf{s}_\theta(\mathbf{x}_t,t) - \nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t) \big\|_2^2 \Big] = \mathbb{E}_{t}\,\mathbb{E}_{\mathbf{x}_0\sim p_{\text{data}}}\,\mathbb{E}_{\mathbf{x}_t\sim p(\cdot\mid \mathbf{x}_0)} \Big[ \lambda(t)\, \big\| \mathbf{s}_\theta(\mathbf{x}_t,t) -\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t\mid \mathbf{x}_0) \big\|_2^2 \Big] + C." />
               </div>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/denoising_score_matching.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="820"
-                  loading="lazy"
-                  title="Noise Schedule Explorer"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-denoising-score-matching"
+                title="Denoising Score Matching"
+                src="/assets/denoising_score_matching.html"
+                height={820}
+              />
               
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Once the score network <InlineMath math="\mathbf{s}_\theta" /> has been learned, it can be plugged back into the reverse-time dynamics for generation. One option is to sample from the <em>reverse-time SDE</em> itself. A particularly clean alternative is the <em>probability-flow ODE (PF-ODE)</em>, which gives a <em>deterministic</em> trajectory from noise to data:
@@ -657,15 +955,12 @@ export default function BlogPost() {
                 One subtle point is worth emphasizing. The reverse-time SDE should <em>not</em> be understood as simply taking a sample path from the forward SDE and playing the movie backward. For stochastic processes, time reversal is more delicate: the backward dynamics is itself a different SDE, with a score-corrected drift chosen so that the marginals evolve through the same family <InlineMath math="p_t" />, but now in reverse. The PF-ODE is different. Because it is deterministic, once its vector field is defined, we can integrate it either forward in time from data to noise or backward in time from noise to data. So the clean picture is this: the forward SDE and the reverse-time SDE are two related but different stochastic processes that share the same marginal family <InlineMath math="p_t" /> in opposite time directions, whereas the PF-ODE is a single deterministic flow that can be solved in either direction while matching those same marginal snapshots <InlineMath math="p_t" />.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/score_sde_three_dynamics.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="580"
-                  loading="lazy"
-                  title="Three Dynamics: Forward SDE, Reverse SDE, PF-ODE"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-three-dynamics"
+                title="Three Dynamics: Forward SDE, Reverse SDE, PF-ODE"
+                src="/assets/score_sde_three_dynamics.html"
+                height={580}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 This change of viewpoint is one of the most important shifts from DDPM to Score-SDE. The generation process is no longer described mainly as repeatedly applying discrete denoising steps; instead, it becomes the problem of solving a time-dependent differential equation. That opens the door to the rich literature on numerical ODE/SDE solvers, which can be used to design faster samplers. At the same time, this viewpoint makes one limitation very transparent: diffusion sampling is inherently iterative. Whether we solve the reverse-time SDE or the PF-ODE, generation proceeds through many small updates across time.
@@ -758,15 +1053,12 @@ export default function BlogPost() {
                 This average is a <em>nonlinear</em> function of <InlineMath math="\mathbf{x}" /> that changes with <InlineMath math="t" />. As a result, the ODE trajectories defined by <InlineMath math="\mathbf{v}" /> can be highly curved, even though every underlying conditional path is straight.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/conditional_vs_marginal_paths.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="620"
-                  loading="lazy"
-                  title="Conditional vs Marginal Paths"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-conditional-vs-marginal-paths"
+                title="Conditional vs Marginal Paths"
+                src="/assets/conditional_vs_marginal_paths.html"
+                height={620}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 The takeaway: <em>"linear interpolation" describes the motion of individual coupled samples, not the evolution of the full probability distribution.</em> A linear noise schedule does not straighten the ODE trajectories, so it does not, on its own, guarantee fast sampling with fewer solver steps.
@@ -871,15 +1163,12 @@ export default function BlogPost() {
                 In both cases, repeating the update from <InlineMath math="t=T" /> down to <InlineMath math="t=0" /> yields a data-like sample <InlineMath math="\mathbf{x}_0" />.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/euler_vs_heun_solver.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="560"
-                  loading="lazy"
-                  title="Euler vs Heun Solver"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-euler-vs-heun-solver"
+                title="Euler vs Heun Solver"
+                src="/assets/euler_vs_heun_solver.html"
+                height={560}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Building on the key insight from Score SDE that diffusion sampling is essentially solving differential equations, sampling can be steered by taking linear combinations of vector fields (e.g., classifier guidance / classifier-free guidance); see{" "}
@@ -948,15 +1237,12 @@ export default function BlogPost() {
                 So, while different papers choose different training targets, they are largely <em>inter-convertible descriptions</em> of the same density evolution.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/four_predictions.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="580"
-                  loading="lazy"
-                  title="Four Prediction Parameterizations"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-four-prediction-parameterizations"
+                title="Four Prediction Parameterizations"
+                src="/assets/four_predictions.html"
+                height={580}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 In{" "}
@@ -1178,15 +1464,12 @@ export default function BlogPost() {
                 Below, we illustrate the change-of-variable story for deforming point clouds and densities between the data distribution and a Gaussian noise prior: from one large function jump, to many layered function jumps, and finally to the continuous limit described by the continuity equation:
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/cov_2d_map.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="640"
-                  loading="lazy"
-                  title="Change-of-Variable 2D Map"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-change-of-variable-2d-map"
+                title="Change-of-Variable 2D Map"
+                src="/assets/cov_2d_map.html"
+                height={640}
+              />
 
               <h3 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mt-8 mb-4">
                 Enter the Noise
@@ -1224,15 +1507,12 @@ export default function BlogPost() {
                 This equation is the formal way to say: drift moves the probability cloud, and Gaussian jitters blur it.
               </p>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/fokker_planck.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="640"
-                  loading="lazy"
-                  title="Fokker-Planck Equation"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-fokker-planck-equation"
+                title="Fokker-Planck Equation"
+                src="/assets/fokker_planck.html"
+                height={640}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Let us revisit how the change-of-variable story shows up inside diffusion models.
@@ -1557,15 +1837,12 @@ export default function BlogPost() {
                 How the Three Flow Map Models Relate
               </h3>
 
-              <div className="my-6">
-                <iframe
-                  src="/assets/flow_map_models.html"
-                  style={{ width: '100%', border: 'none', borderRadius: '3px' }}
-                  height="640"
-                  loading="lazy"
-                  title="Flow Map Models Comparison"
-                />
-              </div>
+              <InteractivePanel
+                id="interactive-flow-map-models-comparison"
+                title="Flow Map Models Comparison"
+                src="/assets/flow_map_models.html"
+                height={640}
+              />
 
               <p className="leading-relaxed text-slate-700 dark:text-slate-300">
                 CTM contains CM as a special anchored case. If CTM always fixes the terminal time to <InlineMath math="t=0" />, then it only needs to learn the maps <InlineMath math="\Psi_{s\to 0}" />, which is exactly the CM setting.
@@ -1669,7 +1946,8 @@ export default function BlogPost() {
               </p>
             </section>
           </div>
-        </article>
+          </article>
+        </div>
 
         <div className="mt-12 pt-8 border-t border-slate-200">
           <Link
