@@ -423,9 +423,26 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     if (dx > 50) prevAbout();
     if (dx < -50) nextAbout();
   };
-
+  
   return (
     <div className="min-h-screen transition-colors duration-200 bg-[#F8F2FF] dark:bg-slate-900">
+      <div className="pointer-events-none fixed left-4 right-20 top-6 z-50 flex justify-end sm:right-24">
+        <span
+          className="inline-flex max-w-[calc(100vw-7rem)] items-center truncate rounded-full px-4 py-2 text-[11px] font-bold tracking-wide shadow-lg sm:text-sm"
+          style={{
+            background:
+              'linear-gradient(135deg, #d4a017 0%, #f5d442 40%, #ffe066 55%, #f5d442 70%, #b8860b 100%)',
+            color: '#4a2800',
+            boxShadow:
+              '0 4px 16px rgba(180, 130, 20, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.4)',
+            border: '1px solid rgba(180, 130, 20, 0.3)',
+            textShadow: '0 1px 0 rgba(255, 255, 255, 0.3)',
+          }}
+        >
+          Forthcoming from MIT Press, 2027
+        </span>
+      </div>
+  
       <DarkModeToggle />
 
       <div className="max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
