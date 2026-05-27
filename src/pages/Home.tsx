@@ -424,7 +424,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
     if (dx < -50) nextAbout();
   };
   
-  return (
+
 return (
   <div className="relative min-h-screen transition-colors duration-200 bg-[#F8F2FF] dark:bg-slate-900">
     <DarkModeToggle />
