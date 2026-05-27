@@ -85,15 +85,14 @@ export default function Errata() {
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Errata
+            Update &amp; Errata
           </h1>
         </div>
 
         <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-700 dark:text-slate-300">
-          The PDF below lists corrections and updates to the book and points out
-          the errata. We are grateful for feedback from the community; if you
-          notice any errors, typos, or unclear passages, please feel free to
-          reach out.
+          The PDF below lists updates and corrections to the book. We are grateful
+          for feedback from the community; if you notice any errors, typos, or
+          unclear passages, please feel free to reach out.
         </p>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -108,14 +107,14 @@ export default function Errata() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="truncate text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Errata PDF
+                  Update &amp; Errata PDF
                 </p>
                 <span className="rounded-md bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
                   PDF
                 </span>
               </div>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                Open the latest list of corrections.
+                Open the latest list of updates and corrections.
               </p>
             </div>
 
