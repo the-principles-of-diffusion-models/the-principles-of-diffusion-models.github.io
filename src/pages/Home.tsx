@@ -425,35 +425,33 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
   };
   
   return (
-    <div className="min-h-screen transition-colors duration-200 bg-[#F8F2FF] dark:bg-slate-900">
-      <div className="pointer-events-none fixed left-4 right-20 top-6 z-50 flex justify-end sm:right-24">
-        <span
-          className="inline-flex max-w-[calc(100vw-7rem)] items-center truncate rounded-full px-4 py-2 text-[11px] font-bold tracking-wide shadow-lg sm:text-sm"
-          style={{
-            background:
-              'linear-gradient(135deg, #d4a017 0%, #f5d442 40%, #ffe066 55%, #f5d442 70%, #b8860b 100%)',
-            color: '#4a2800',
-            boxShadow:
-              '0 4px 16px rgba(180, 130, 20, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.4)',
-            border: '1px solid rgba(180, 130, 20, 0.3)',
-            textShadow: '0 1px 0 rgba(255, 255, 255, 0.3)',
-          }}
-        >
-          Forthcoming from MIT Press, 2027
-        </span>
-      </div>
-  
-      <DarkModeToggle />
+return (
+  <div className="relative min-h-screen transition-colors duration-200 bg-[#F8F2FF] dark:bg-slate-900">
+    <DarkModeToggle />
 
-      <div className="max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <header className="text-center mb-12">
-          <h1 className="text-5xl sm:text-[3.4rem] font-bold text-slate-900 dark:text-slate-100 mb-3 leading-tight">
-            The Principles of Diffusion Models
-          </h1>
-          <p className="text-2xl sm:text-[1.75rem] text-slate-700 dark:text-slate-300 font-medium mb-6">
-            From Origins to Advances
-          </p>
-        </header>
+    <div className="absolute left-4 right-20 top-4 z-40 flex justify-end sm:right-24">
+      <span
+        className="inline-flex max-w-[calc(100vw-7rem)] items-center truncate rounded-full px-4 py-2 text-[11px] font-bold tracking-wide shadow-lg sm:text-sm"
+        style={{
+          background:
+            'linear-gradient(135deg, #d4a017 0%, #f5d442 40%, #ffe066 55%, #f5d442 70%, #b8860b 100%)',
+          color: '#4a2800',
+          boxShadow:
+            '0 4px 16px rgba(180, 130, 20, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.4)',
+          border: '1px solid rgba(180, 130, 20, 0.3)',
+          textShadow: '0 1px 0 rgba(255, 255, 255, 0.3)',
+        }}
+      >
+        Forthcoming from MIT Press, 2027
+      </span>
+    </div>
+
+    <div className="max-w-5xl mx-auto px-4 pt-28 pb-12 sm:px-6 lg:px-8">
+      <header className="text-center mb-8">
+        <h1 className="text-5xl sm:text-[3.4rem] font-bold text-slate-900 dark:text-slate-100 leading-tight">
+          The Principles of Diffusion Models
+        </h1>
+      </header>
 
         <div className="flex justify-center mb-8">
           <span className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
