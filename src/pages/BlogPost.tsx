@@ -1,4 +1,5 @@
-import { ArrowLeft, ExternalLink, FileText } from 'lucide-react';
+import { useEffect, useState, type MouseEvent } from 'react';
+import { ArrowLeft, ExternalLink, FileText, Link2, List } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
