@@ -510,7 +510,10 @@ return (
             </h2>
           </div>
 
-          <div className="space-y-4">
+          <div
+            className="max-h-[38rem] overflow-y-auto pr-3 space-y-4 overscroll-contain scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent"
+            aria-label="Scrollable news and updates"
+          >
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-orange-500">
               <div className="flex items-start justify-between mb-2">
                 <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
