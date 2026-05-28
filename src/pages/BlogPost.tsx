@@ -1053,27 +1053,12 @@ export default function BlogPost() {
                 Namely, we rewrite the objective so we can swap an <em>unknown marginal</em> target for a <em>tractable conditional</em> one. The two losses differ only by a constant (independent of <InlineMath math="\theta" />), so they induce the same gradient updates and share the same optimum.
               </p>
               
-              {/* ===== Conditional vs Marginal Flow Matching Velocity Widget ===== */}
-              <figure className="my-10 mx-auto w-full max-w-[860px]">
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/70 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
-                  <iframe
-                    title="Conditional versus marginal velocity fields in flow matching"
-                    src={`${import.meta.env.BASE_URL}assets/conditional_vs_marginal_flow_matching_velocity.html`}
-                    className="block w-full rounded-lg"
-                    style={{
-                      height: 'clamp(720px, 108vw, 860px)',
-                      border: 0,
-                      background: 'transparent',
-                    }}
-                    loading="lazy"
-                  />
-                </div>
-              
+              {/* ===== Conditional vs Marginal Flow Matching Velocity Fields ===== */}
               <InteractivePanel
                 id="interactive-conditional-vs-marginal-velocity-fields"
                 title="Conditional vs Marginal Velocity Fields"
-                src={`${import.meta.env.BASE_URL}assets/conditional_vs_marginal_flow_matching_velocity.html`}
-                height="820px"
+                src="/assets/conditional_vs_marginal_flow_matching_velocity.html"
+                height={820}
               />
               
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
@@ -2001,5 +1986,4 @@ export default function BlogPost() {
     </div>
   );
 }
-
 
