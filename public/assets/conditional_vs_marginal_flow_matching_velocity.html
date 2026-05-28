@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conditional vs Marginal Flow Matching Velocity Field</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:transparent;padding:12px}
+.fm-w{font-family:'Crimson Pro',Georgia,serif;max-width:780px;margin:0 auto;padding:22px 20px 18px;background:#fcfbf9;border-radius:3px;border:1px solid #e2ddd5;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.fm-h3{font-size:18px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #1a1a1a;padding-bottom:5px;margin-bottom:8px}
+.fm-desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:12px}
+.fm-desc code{font-size:11px;background:#f0ece6;padding:1px 4px;border-radius:2px;font-family:'IBM Plex Mono',monospace}
+.fm-ctrl{display:flex;gap:14px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.fm-sg{flex:1;min-width:140px}
+.fm-sl{font-size:10.5px;font-weight:700;color:#333;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+input[type=range]{width:100%;height:5px}
+.fm-canvas{display:block;margin:0 auto;border:1px solid #e2ddd5;border-radius:3px;cursor:grab;max-width:100%;height:auto}
+.fm-canvas:active{cursor:grabbing}
+.fm-note{margin-top:10px;padding:8px 12px;background:#f8f6f2;border-radius:3px;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#555;line-height:1.6;border-left:2.5px solid #c23616}
+.fm-btns{display:flex;gap:5px;flex-wrap:nowrap;margin-bottom:8px;overflow-x:auto}
+.fm-btn{padding:5px 8px;border-radius:2px;border:1.5px solid #ddd;background:#fff;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .12s;line-height:1.3;flex-shrink:0}
+.fm-btn:hover{background:#fafaf8}
+.fm-btn.on{font-weight:700;border-width:2px;background:#fffdfb}
+.fm-btn .sub{font-size:8.5px;font-weight:400;display:block;color:#999}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Interactive: conditional versus marginal velocity fields in flow matching. Colored arrows from the draggable point show the competing conditional target velocities. The red arrow shows their marginal average.</h2>
+<div class="fm-w">
+  <div class="fm-h3">Interactive · Conditional vs Marginal Velocity Fields</div>
+  <p class="fm-desc">
+    Flow matching trains a network to predict a velocity field transporting noise <code>x&#x2081;</code> to data <code>x&#x2080;</code>.
+    In the <em>conditional</em> view, <code>x&#x2080;</code> is known, so there is one clean target direction.
+    In the <em>marginal</em> view, the network only sees <code>(x&#x209C;,t)</code>: the same point can have several plausible target velocities.
+    The colored arrows now show those competing conditional directions; the red arrow is the averaged marginal target.
+  </p>
+
+  <div class="fm-ctrl">
+    <div class="fm-sg">
+      <div class="fm-sl">flow time t = <span id="fm-tval">0.40</span>
+        <span style="font-weight:400;color:#999"> (0 = noise source, 1 = data)</span></div>
+      <input type="range" id="fm-tslider" min="0.05" max="0.90" step="0.01" value="0.40" style="accent-color:#c23616"/>
+    </div>
+  </div>
+
+  <div class="fm-btns">
+    <button class="fm-btn on" id="fm-ball" style="border-color:#c23616">
+      Marginal u&#x209C;(x&#x209C;)<span class="sub">averages all modes — HARD</span>
+    </button>
+    <button class="fm-btn" id="fm-bm0" style="border-color:#8e44ad;color:#8e44ad">
+      Conditional on mode 1<span class="sub">x&#x2080; known — EASY</span>
+    </button>
+    <button class="fm-btn" id="fm-bm1" style="border-color:#1e3a5f;color:#1e3a5f">
+      Conditional on mode 2<span class="sub">x&#x2080; known — EASY</span>
+    </button>
+    <button class="fm-btn" id="fm-bm2" style="border-color:#c97a2e;color:#c97a2e">
+      Conditional on mode 3<span class="sub">x&#x2080; known — EASY</span>
+    </button>
+  </div>
+
+  <canvas id="fm-cv" class="fm-canvas" width="680" height="500"></canvas>
+  <div class="fm-note" id="fm-note"></div>
+</div>
+
+<script>
+var DPR=window.devicePixelRatio||1,T=0.40,condMode=-1;
+var modes=[{x:-2.2,y:1.5,col:'#8e44ad',name:'mode 1'},{x:2.0,y:0.8,col:'#1e3a5f',name:'mode 2'},{x:0,y:-2.0,col:'#c97a2e',name:'mode 3'}];
+var modeW=[0.35,0.35,0.30],xt={x:-0.1,y:0.10},lo=-4.5,hi=4.5;
+var _sd=1;
+function srand(s){_sd=s;}
+function rand(){_sd=(_sd*1664525+1013904223)&0x7fffffff;return _sd/0x7fffffff;}
+function randn(){var u=rand()+1e-10,v=rand();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+function postW(x,y,t){
+  var s=Math.max(1-t,0.05),s2=s*s;
+  var lws=modes.map(function(m,i){var dx=x-t*m.x,dy=y-t*m.y;return Math.log(modeW[i])-(dx*dx+dy*dy)/(2*s2);});
+  var mx=Math.max.apply(null,lws),ws=lws.map(function(lw){return Math.exp(lw-mx);});
+  var S=ws.reduce(function(a,b){return a+b;},0);return ws.map(function(w){return w/S;});
+}
+function condVel(x,y,t,k){var d=Math.max(1-t,0.01);return{vx:(modes[k].x-x)/d,vy:(modes[k].y-y)/d};}
+function getVel(x,y,t,cond){
+  if(cond>=0){var cv=condVel(x,y,t,cond);return{vx:cv.vx,vy:cv.vy,wt:modes.map(function(_,i){return i===cond?1:0;})};}
+  var w=postW(x,y,t),vx=0,vy=0;
+  modes.forEach(function(m,i){var cv=condVel(x,y,t,i);vx+=w[i]*cv.vx;vy+=w[i]*cv.vy;});
+  return{vx:vx,vy:vy,wt:w};
+}
+function ent(w){return -w.reduce(function(s,wi){return s+(wi>1e-10?wi*Math.log(wi):0);},0);}
+function blendCol(w){
+  var r=0,g=0,b=0;
+  modes.forEach(function(m,i){r+=parseInt(m.col.slice(1,3),16)*w[i];g+=parseInt(m.col.slice(3,5),16)*w[i];b+=parseInt(m.col.slice(5,7),16)*w[i];});
+  return'rgb('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+')';
+}
+function drawTriArrow(ctx,x,y,nx,ny,len,stroke,fill,lw,head,alpha){
+  var ex=x+nx*len,ey=y+ny*len,ang=Math.atan2(ny,nx),ha=Math.PI/5.1;
+  ctx.globalAlpha=alpha;ctx.strokeStyle=stroke;ctx.fillStyle=fill;ctx.lineWidth=lw;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(ex,ey);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-head*Math.cos(ang-ha),ey-head*Math.sin(ang-ha));
+  ctx.lineTo(ex-head*Math.cos(ang+ha),ey-head*Math.sin(ang+ha));
+  ctx.closePath();ctx.fill();
+  ctx.globalAlpha=1;ctx.lineCap='butt';ctx.lineJoin='miter';
+  return{ex:ex,ey:ey,ang:ang};
+}
+function smallArrow(ctx,x,y,vx,vy,col,alpha,lw,scale){
+  var spd=Math.sqrt(vx*vx+vy*vy);if(spd<1e-4)return;
+  var dist=spd*Math.max(1-T,0.02);
+  var len=Math.max(18*(1-Math.exp(-dist/2.4))*(scale||1),2.2);
+  var nx=vx/spd,ny=vy/spd;
+  drawTriArrow(ctx,x,y,nx,ny,len,col,col,lw||0.8,Math.max(len*0.36,3.8)*(scale||1),alpha);
+}
+function bigVectorArrow(ctx,x,y,vx,vy,col,label,sub,opt){
+  opt=opt||{};
+  var spd=Math.sqrt(vx*vx+vy*vy);
+  if(spd<1e-5){
+    ctx.save();
+    ctx.strokeStyle=col;ctx.lineWidth=5;ctx.globalAlpha=0.9;
+    ctx.beginPath();ctx.arc(x,y,opt.zeroRadius||28,0,2*Math.PI);ctx.stroke();
+    ctx.strokeStyle='#fff';ctx.lineWidth=9;ctx.globalAlpha=0.95;
+    ctx.beginPath();ctx.moveTo(x-20,y-20);ctx.lineTo(x+20,y+20);ctx.stroke();
+    ctx.strokeStyle=col;ctx.lineWidth=4;ctx.globalAlpha=1;
+    ctx.beginPath();ctx.moveTo(x-20,y-20);ctx.lineTo(x+20,y+20);ctx.stroke();
+    ctx.restore();return{x:x,y:y};
+  }
+  var nx=vx/spd,ny=vy/spd,len=opt.len||92;
+  var halo=opt.haloWidth||11,outline=opt.outlineWidth||7,core=opt.coreWidth||4.5,head=opt.head||17;
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.20)';ctx.shadowBlur=opt.shadowBlur||8;ctx.shadowOffsetY=1;
+  drawTriArrow(ctx,x,y,nx,ny,len,'#fff','#fff',halo,head+5,0.98);
+  ctx.shadowBlur=0;
+  if(opt.outline!==false){drawTriArrow(ctx,x,y,nx,ny,len,'#242424','#242424',outline,head+2,opt.outlineAlpha||0.86);}
+  var p=drawTriArrow(ctx,x,y,nx,ny,len,col,col,core,head,opt.alpha||1);
+  ctx.restore();
+  if(label){
+    var ox=8,oy=-8;
+    if(nx>0.55)ox=10;if(nx<-0.55)ox=-116;if(ny>0.35)oy=18;if(ny<-0.35)oy=-14;
+    ctx.save();
+    ctx.font="bold 10px 'IBM Plex Mono',monospace";ctx.textAlign='left';ctx.textBaseline='middle';
+    var tx=p.ex+ox,ty=p.ey+oy;
+    if(opt.labelBox!==false){
+      var w=ctx.measureText(label).width+12;
+      if(sub){w=Math.max(w,ctx.measureText(sub).width+12);}
+      ctx.fillStyle='rgba(252,251,249,0.88)';ctx.strokeStyle='rgba(0,0,0,0.08)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.roundRect(tx-5,ty-9,w,sub?28:18,3);ctx.fill();ctx.stroke();
+    }
+    ctx.fillStyle=col;ctx.fillText(label,tx,ty);
+    if(sub){ctx.font="9px 'IBM Plex Mono',monospace";ctx.fillStyle='#666';ctx.fillText(sub,tx,ty+11);}
+    ctx.restore();
+  }
+  return p;
+}
+function drawWeightBars(ctx,x,y,w){
+  ctx.save();
+  ctx.fillStyle='rgba(252,251,249,0.92)';ctx.strokeStyle='rgba(194,54,22,0.30)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.roundRect(x,y,206,104,5);ctx.fill();ctx.stroke();
+  ctx.font="bold 10px 'IBM Plex Mono',monospace";ctx.fillStyle='#333';ctx.textAlign='left';
+  ctx.fillText('local target mixture',x+10,y+15);
+  ctx.font="9px 'IBM Plex Mono',monospace";ctx.fillStyle='#777';
+  ctx.fillText('same (xₜ,t), different labels',x+10,y+29);
+  for(var i=0;i<3;i++){
+    var yy=y+43+i*17;
+    ctx.fillStyle=modes[i].col;ctx.fillRect(x+10,yy,Math.max(4,92*w[i]),7);
+    ctx.strokeStyle='rgba(0,0,0,0.10)';ctx.strokeRect(x+10,yy,92,7);
+    ctx.fillStyle=modes[i].col;ctx.font="bold 9px 'IBM Plex Mono',monospace";
+    ctx.fillText('w'+(i+1)+'='+w[i].toFixed(2),x+112,yy+6);
+  }
+  ctx.fillStyle='#c23616';ctx.font="bold 9px 'IBM Plex Mono',monospace";
+  ctx.fillText('red = MSE average target',x+10,y+96);
+  ctx.restore();
+}
+function drawCancellationMeter(ctx,x,y,ratio){
+  ctx.save();
+  ratio=clamp(ratio,0,1);
+  ctx.fillStyle='rgba(252,251,249,0.92)';ctx.strokeStyle='rgba(0,0,0,0.10)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(x,y,196,45,5);ctx.fill();ctx.stroke();
+  ctx.font="bold 9px 'IBM Plex Mono',monospace";ctx.fillStyle='#333';ctx.textAlign='left';
+  ctx.fillText('mean strength after averaging',x+9,y+14);
+  ctx.fillStyle='rgba(0,0,0,0.08)';ctx.fillRect(x+9,y+22,134,8);
+  ctx.fillStyle='#c23616';ctx.fillRect(x+9,y+22,134*ratio,8);
+  ctx.strokeStyle='rgba(0,0,0,0.16)';ctx.strokeRect(x+9,y+22,134,8);
+  ctx.fillStyle=ratio<0.45?'#c23616':'#555';ctx.font="bold 9px 'IBM Plex Mono',monospace";
+  ctx.fillText((ratio*100).toFixed(0)+'%',x+152,y+29);
+  ctx.fillStyle='#777';ctx.font="8.5px 'IBM Plex Mono',monospace";
+  ctx.fillText(ratio<0.45?'directions are canceling':'less cancellation here',x+9,y+40);
+  ctx.restore();
+}
+
+function draw(){
+  var cv=document.getElementById('fm-cv'),W=680,H=500;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';
+  var ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
+  ctx.fillStyle='#fcfbf9';ctx.fillRect(0,0,W,H);
+  var pl=10,pr=10,pt=10,pb=10,iW=W-pl-pr,iH=H-pt-pb;
+  var toX=function(v){return pl+(v-lo)/(hi-lo)*iW;};
+  var toY=function(v){return pt+iH-(v-lo)/(hi-lo)*iH;};
+
+  // Entropy haze: high posterior ambiguity, not data density.
+  if(condMode===-1){
+    var res=58,pw=iW/res,ph=iH/res,logM=Math.log(3);
+    for(var py=0;py<res;py++)for(var px=0;px<res;px++){
+      var xv=lo+(px+0.5)/res*(hi-lo),yv=lo+(1-(py+0.5)/res)*(hi-lo);
+      var Hv=ent(postW(xv,yv,T))/logM,a=Hv*0.12;
+      if(a>0.010){ctx.fillStyle='rgba(194,54,22,'+a.toFixed(3)+')';ctx.fillRect(pl+px*pw,pt+py*ph,pw+0.7,ph+0.7);}
+    }
+  }
+
+  // Very faint grid.
+  ctx.strokeStyle='rgba(0,0,0,0.035)';ctx.lineWidth=0.5;
+  for(var v=Math.ceil(lo);v<=hi;v++){
+    ctx.beginPath();ctx.moveTo(toX(v),pt);ctx.lineTo(toX(v),pt+iH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pl,toY(v));ctx.lineTo(pl+iW,toY(v));ctx.stroke();
+  }
+
+  // Background trajectories, kept faint to avoid competing with the main arrows.
+  srand(42);
+  var nT=14,nS=40,dt=1/nS;
+  for(var i=0;i<nT;i++){
+    var sx=randn()*1.25,sy=randn()*1.25,pts=[{x:sx,y:sy}],cx=sx,cy=sy;
+    for(var s=0;s<nS-1;s++){
+      var ts=s*dt,vv=getVel(cx,cy,ts,condMode);
+      cx=clamp(cx+vv.vx*dt,lo+0.15,hi-0.15);
+      cy=clamp(cy+vv.vy*dt,lo+0.15,hi-0.15);
+      pts.push({x:cx,y:cy});
+    }
+    var ep=pts[pts.length-1],ew=postW(ep.x,ep.y,0.97);
+    var dI=0;ew.forEach(function(w,ii){if(w>ew[dI])dI=ii;});
+    var tc=condMode>=0?modes[condMode].col:modes[dI].col;
+    ctx.globalAlpha=0.055;ctx.strokeStyle=tc;ctx.lineWidth=0.85;
+    ctx.beginPath();ctx.moveTo(toX(pts[0].x),toY(pts[0].y));
+    for(var j=1;j<pts.length;j++)ctx.lineTo(toX(pts[j].x),toY(pts[j].y));
+    ctx.stroke();ctx.globalAlpha=1;
+  }
+
+  // Very light background vector field.
+  var gN=12;
+  for(var gy=0;gy<gN;gy++)for(var gx=0;gx<gN;gx++){
+    var xv2=lo+(gx+0.5)/gN*(hi-lo),yv2=lo+(gy+0.5)/gN*(hi-lo);
+    var vel=getVel(xv2,yv2,T,condMode),ac,aa;
+    if(condMode>=0){ac=modes[condMode].col;aa=0.095;}
+    else{ac=blendCol(vel.wt);var Hv2=ent(vel.wt)/Math.log(3);aa=0.030+(1-Hv2)*0.105;}
+    smallArrow(ctx,toX(xv2),toY(yv2),vel.vx,-vel.vy,ac,aa,0.72,0.62);
+  }
+
+  var vxt=getVel(xt.x,xt.y,T,condMode),wxt=vxt.wt,xtPx=toX(xt.x),xtPy=toY(xt.y);
+
+  // Mode markers.
+  modes.forEach(function(m,mi){
+    var isAct=condMode===-1||condMode===mi;
+    ctx.globalAlpha=isAct?1:0.18;
+    var mpx=toX(m.x),mpy=toY(m.y),spx=Math.max(1-T,0.05)*iW/(hi-lo);
+    ctx.strokeStyle=m.col;ctx.lineWidth=condMode===mi?3:1.6;
+    ctx.beginPath();ctx.arc(mpx,mpy,spx*0.65,0,2*Math.PI);ctx.stroke();
+    ctx.strokeStyle=m.col+'44';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(mpx,mpy,spx*1.3,0,2*Math.PI);ctx.stroke();
+    ctx.strokeStyle=m.col;ctx.lineWidth=2.8;
+    ctx.beginPath();ctx.moveTo(mpx-8,mpy-8);ctx.lineTo(mpx+8,mpy+8);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(mpx+8,mpy-8);ctx.lineTo(mpx-8,mpy+8);ctx.stroke();
+    ctx.fillStyle=m.col;ctx.font="bold 10px 'IBM Plex Mono',monospace";ctx.textAlign='center';
+    var ly=mpy+spx*0.65+14;
+    ctx.fillText(condMode===-1?'x₀ mode '+(mi+1):'x₀ target',mpx,ly);
+    if(condMode===-1){ctx.font="9px 'IBM Plex Mono',monospace";ctx.fillText('posterior w='+wxt[mi].toFixed(2),mpx,ly+12);}
+    ctx.globalAlpha=1;
+  });
+
+  // Foreground arrows: make the mixture visible before showing the average.
+  var componentNorm=0;
+  modes.forEach(function(m,mi){var cvv=condVel(xt.x,xt.y,T,mi);componentNorm+=wxt[mi]*Math.sqrt(cvv.vx*cvv.vx+cvv.vy*cvv.vy);});
+  var avgNorm=Math.sqrt(vxt.vx*vxt.vx+vxt.vy*vxt.vy);
+  var ratio=componentNorm>1e-6?avgNorm/componentNorm:1;
+
+  if(condMode===-1){
+    modes.forEach(function(m,mi){
+      var mpx=toX(m.x),mpy=toY(m.y),dx=mpx-xtPx,dy=mpy-xtPy,d=Math.sqrt(dx*dx+dy*dy)||1;
+      var wi=wxt[mi];
+      var len=clamp(d*0.42,70,142);
+      var alpha=0.40+0.45*wi;
+      var lw=4.0+3.4*wi;
+      var head=15+4*wi;
+      var p=bigVectorArrow(ctx,xtPx,xtPy,dx,dy,m.col,null,null,{len:len,haloWidth:lw+5.0,outlineWidth:lw+1.9,coreWidth:lw,head:head,alpha:alpha,outlineAlpha:0.18,shadowBlur:1,labelBox:false});
+      ctx.save();
+      ctx.font="bold 9px 'IBM Plex Mono',monospace";ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(252,251,249,0.92)';ctx.strokeStyle='rgba(0,0,0,0.07)';ctx.lineWidth=1;
+      var lab='v'+(mi+1)+'  w='+wi.toFixed(2),mw=ctx.measureText(lab).width+10;
+      var lx=p.ex,ly=p.ey+(mi===2?16:-14);
+      ctx.beginPath();ctx.roundRect(lx-mw/2,ly-9,mw,18,3);ctx.fill();ctx.stroke();
+      ctx.fillStyle=m.col;ctx.fillText(lab,lx,ly);
+      ctx.restore();
+    });
+    var sub=ratio<0.45?'magnified: directions cancel':'weighted sum of colored arrows';
+    bigVectorArrow(ctx,xtPx,xtPy,vxt.vx,-vxt.vy,'#c23616','marginal average',sub,{len:clamp(78+38*ratio,78,124),haloWidth:14,outlineWidth:9,coreWidth:6,head:21,alpha:1,shadowBlur:10});
+    drawWeightBars(ctx,W-222,14,wxt);
+    drawCancellationMeter(ctx,W-216,H-58,ratio);
+  } else {
+    var cm=modes[condMode],dx2=toX(cm.x)-xtPx,dy2=toY(cm.y)-xtPy,d2=Math.sqrt(dx2*dx2+dy2*dy2)||1;
+    bigVectorArrow(ctx,xtPx,xtPy,dx2,dy2,cm.col,'one target direction','x₀ is known',{len:clamp(d2*0.54,86,150),haloWidth:14,outlineWidth:9,coreWidth:6,head:22,alpha:1,shadowBlur:10});
+  }
+
+  // x_t marker is drawn last so it never hides behind arrows.
+  ctx.fillStyle='#fff';ctx.strokeStyle='#333';ctx.lineWidth=3.2;
+  ctx.beginPath();ctx.arc(xtPx,xtPy,12,0,2*Math.PI);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#333';ctx.beginPath();ctx.arc(xtPx,xtPy,5.4,0,2*Math.PI);ctx.fill();
+  ctx.font="bold 11px 'IBM Plex Mono',monospace";ctx.textAlign='left';ctx.fillStyle='#333';
+  ctx.fillText('xₜ (drag me)',xtPx+15,xtPy+5);
+
+  // Status labels.
+  if(condMode===-1){
+    ctx.fillStyle='#c23616';ctx.font="bold 14px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+    ctx.fillText('HARD: one xₜ has multiple possible target velocities',14,26);
+    ctx.fillStyle='#777';ctx.font="10px 'IBM Plex Mono',monospace";
+    ctx.fillText('colored = conditional targets  |  red = v(xₜ, t), the marginal average learned by MSE',14,42);
+    ctx.fillText('red haze = high mode ambiguity / posterior entropy (not data density)',14,56);
+  } else {
+    ctx.fillStyle=modes[condMode].col;ctx.font="bold 14px 'IBM Plex Mono',monospace";ctx.textAlign='left';
+    ctx.fillText('EASY: v(xₜ, t | x₀ = mode '+(condMode+1)+') has one label',14,26);
+    ctx.fillStyle='#777';ctx.font="10px 'IBM Plex Mono',monospace";
+    ctx.fillText('conditioning removes the mixture: every training pair gives one clean velocity',14,42);
+  }
+
+  // Text note.
+  var el=document.getElementById('fm-note');
+  var dI2=0;wxt.forEach(function(w,i){if(w>wxt[dI2])dI2=i;});
+  var domW=wxt[dI2];
+  if(condMode===-1){
+    if(domW<0.75){
+      el.innerHTML='<strong>Why marginal is hard:</strong> the input to the marginal model is only <code>(x&#x209C;,t)</code>, but the same point can be paired with several different <code>x&#x2080;</code> modes during training. The colored arrows are those incompatible conditional velocity labels. MSE training asks the network to output their average, shown in red. When the arrows disagree, the red mean points between modes or shrinks because the directions cancel. Current weights: '+
+        modes.map(function(m,i){return'<span style="color:'+m.col+'">mode '+(i+1)+'='+wxt[i].toFixed(2)+'</span>';}).join(', ')+
+        '. <strong>Click a conditional tab</strong> to see the easy case: once <code>x&#x2080;</code> is given, only one colored arrow remains.';
+    } else {
+      el.innerHTML='Here <code>x&#x209C;</code> is close to <strong style="color:'+modes[dI2].col+'">mode '+(dI2+1)+'</strong> (posterior weight '+domW.toFixed(2)+'), so the marginal average is less ambiguous. <strong>Drag x&#x209C; into the red center region</strong> to see the difficult regime: the three colored conditional arrows pull in different directions, and the red marginal target becomes an average rather than a real mode direction.';
+    }
+  } else {
+    el.innerHTML='<strong style="color:'+modes[condMode].col+'">Conditioned on mode '+(condMode+1)+':</strong> the target <code>x&#x2080;</code> is known, so the velocity label is unique. There is no need to average competing directions for the same <code>(x&#x209C;,t)</code>. This is why conditional flow matching gives an easy regression target, while the marginal vector field v(xₜ, t) is obtained only after averaging over many conditional targets.';
+  }
+}
+function updBtns(){
+  ['fm-ball','fm-bm0','fm-bm1','fm-bm2'].forEach(function(id,i){
+    var el=document.getElementById(id);
+    el.className='fm-btn'+((condMode===-1&&i===0)||(condMode===i-1&&i>0)?' on':'');
+  });
+}
+document.getElementById('fm-ball').onclick=function(){condMode=-1;updBtns();draw();};
+document.getElementById('fm-bm0').onclick=function(){condMode=0;updBtns();draw();};
+document.getElementById('fm-bm1').onclick=function(){condMode=1;updBtns();draw();};
+document.getElementById('fm-bm2').onclick=function(){condMode=2;updBtns();draw();};
+document.getElementById('fm-tslider').oninput=function(e){T=parseFloat(e.target.value);document.getElementById('fm-tval').textContent=T.toFixed(2);draw();};
+
+var drag=false,cvEl=document.getElementById('fm-cv');
+function mvXt(e){
+  var r=cvEl.getBoundingClientRect(),sx=680/r.width,sy=500/r.height;
+  xt.x=lo+(((e.clientX-r.left)*sx-10)/660)*(hi-lo);
+  xt.y=lo+(1-((e.clientY-r.top)*sy-10)/480)*(hi-lo);
+  xt.x=clamp(xt.x,lo+0.2,hi-0.2);xt.y=clamp(xt.y,lo+0.2,hi-0.2);draw();
+}
+cvEl.addEventListener('mousedown',function(e){drag=true;mvXt(e);});
+cvEl.addEventListener('mousemove',function(e){if(drag)mvXt(e);});
+cvEl.addEventListener('mouseup',function(){drag=false;});
+cvEl.addEventListener('mouseleave',function(){drag=false;});
+cvEl.addEventListener('touchstart',function(e){drag=true;mvXt(e.touches[0]);e.preventDefault();},{passive:false});
+cvEl.addEventListener('touchmove',function(e){if(drag)mvXt(e.touches[0]);e.preventDefault();},{passive:false});
+cvEl.addEventListener('touchend',function(){drag=false;});
+draw();
+</script>
+</body>
+</html>
