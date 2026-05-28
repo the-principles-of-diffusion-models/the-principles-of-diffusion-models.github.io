@@ -1052,7 +1052,31 @@ export default function BlogPost() {
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Namely, we rewrite the objective so we can swap an <em>unknown marginal</em> target for a <em>tractable conditional</em> one. The two losses differ only by a constant (independent of <InlineMath math="\theta" />), so they induce the same gradient updates and share the same optimum.
               </p>
-
+              
+              {/* ===== Conditional vs Marginal Flow Matching Velocity Widget ===== */}
+              <figure className="my-10 mx-auto w-full max-w-[860px]">
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/70 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
+                  <iframe
+                    title="Conditional versus marginal velocity fields in flow matching"
+                    src={`${import.meta.env.BASE_URL}assets/conditional_vs_marginal_flow_matching_velocity.html`}
+                    className="block w-full rounded-lg"
+                    style={{
+                      height: 'clamp(720px, 108vw, 860px)',
+                      border: 0,
+                      background: 'transparent',
+                    }}
+                    loading="lazy"
+                  />
+                </div>
+              
+                <figcaption className="mt-3 text-center text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                  Conditional flow matching gives one clean velocity label after conditioning on the target mode.
+                  Marginal flow matching must average all plausible conditional directions at the same{' '}
+                  <code className="font-mono">(x_t,t)</code>, which can point between modes or shrink when
+                  directions cancel.
+                </figcaption>
+              </figure>
+              
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Before we move on, we stress one subtle but important point. In <em>Flow Matching</em> and <em>Rectified Flow</em>, the noise scheduler choice <InlineMath math="\mathbf{x}_t = (1-t)\,\mathbf{x}_0 + t\,\boldsymbol{\epsilon}" /> means that, for a <em>fixed pair</em> <InlineMath math="(\mathbf{x}_0, \boldsymbol{\epsilon})" />, the sample travels along a perfectly straight line from data to noise. In other words, the <em>conditional path</em> is linear, and the conditional velocity is just the constant <InlineMath math="\boldsymbol{\epsilon} - \mathbf{x}_0" />, pointing from <InlineMath math="\mathbf{x}_0" /> toward <InlineMath math="\boldsymbol{\epsilon}" />.
               </p>
