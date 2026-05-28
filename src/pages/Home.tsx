@@ -71,7 +71,7 @@ function XPostPreview() {
             </p>
 
             <h4 className="mt-1 text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">
-              Follow the public discussion on X
+              Follow the public discussion and latest updates on X
             </h4>
           </div>
 
@@ -86,10 +86,6 @@ function XPostPreview() {
           </a>
         </div>
 
-        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-          A live embedded preview of the announcement post is shown below. If the
-          X widget is blocked by your browser, the button above opens the post directly.
-        </p>
       </div>
 
       <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:p-4 shadow-md">
