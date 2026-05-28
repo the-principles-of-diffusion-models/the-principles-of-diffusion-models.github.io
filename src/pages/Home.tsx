@@ -30,103 +30,80 @@ const BUILD_DATE = typeof __BUILD_TIMESTAMP__ !== 'undefined'
   : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
 /* =========================
-   TOC helpers (dot leaders + font sizing)
-   ========================= */
+ Social post preview
+ ========================= */
 
-type TocKind = 'part' | 'chapter' | 'section';
+function XPostPreview() {
+  const postUrl = 'https://x.com/JCJesseLai/status/1983325172909433002?s=20';
 
-const PART_TITLES = [
-  'A Introduction to Deep Generative Modeling',
-  'B Origins and Foundations of Diffusion Models',
-  'C Sampling of Diffusion Models',
-  'D Toward Learning Fast Diffusion-Based Generators',
-  'Appendices',
-];
+  useEffect(() => {
+    const loadTweet = () => {
+      const twttr = (window as any).twttr;
+      if (twttr?.widgets?.load) {
+        twttr.widgets.load();
+      }
+    };
 
-// ✅ PDF link base + offset (your ToC page numbers -> arXiv PDF page)
-const ARXIV_PDF_BASE = 'https://arxiv.org/pdf/2510.21890';
-const PDF_PAGE_OFFSET = 5; // <-- change to 0 if you don't need +5
+    const existingScript = document.querySelector(
+      'script[src="https://platform.twitter.com/widgets.js"]'
+    );
 
-function stripDotLeaders(s: string) {
-  return s
-    .replace(/\s*(?:\.\s*){2,}/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+    if (existingScript) {
+      loadTweet();
+      return;
+    }
 
-function fixMissingSpaceBeforePage(line: string) {
-  return line.replace(/([^\d\s])(\d{1,4})\s*$/, '$1 $2').trim();
-}
+    const script = document.createElement('script');
+    script.src = 'https://platform.twitter.com/widgets.js';
+    script.async = true;
+    script.charset = 'utf-8';
+    script.onload = loadTweet;
+    document.body.appendChild(script);
+  }, []);
 
-function parseToc(text: string) {
-  const lines = text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  return lines.map((raw, idx) => {
-    const fixed = fixMissingSpaceBeforePage(raw);
-    const m = fixed.match(/^(.*?)(?:\s+)(\d{1,4})$/);
-    const titleRaw = m ? m[1] : fixed;
-    const pageRaw = m ? m[2] : '';
-    const title = stripDotLeaders(titleRaw);
-    const isPart = PART_TITLES.some((p) => title.startsWith(p));
-    const isChapter =
-      !isPart && (/^\d+\s/.test(title) || /^[A-D]\s(?!\.)/.test(title));
-    const isSection = /^\d+\.\d+/.test(title) || /^[A-D]\.\d+/.test(title);
-    const kind: TocKind = isPart ? 'part' : isChapter ? 'chapter' : isSection ? 'section' : 'section';
-    const bookPage = pageRaw ? Number.parseInt(pageRaw, 10) : null;
-    const pdfPage =
-      typeof bookPage === 'number' && Number.isFinite(bookPage) ? bookPage + PDF_PAGE_OFFSET : null;
-    const href = pdfPage ? `${ARXIV_PDF_BASE}#page=${pdfPage}` : null;
-    return { key: `${idx}-${title}`, title, page: pageRaw, kind, href };
-  });
-}
-
-function TocBlock({ text }: { text: string }) {
-  const items = parseToc(text);
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-      <div className="space-y-1 font-mono">
-        {items.map((it) => {
-          const titleClass =
-            it.kind === 'part'
-              ? 'text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100'
-              : it.kind === 'chapter'
-                ? 'text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100'
-                : 'text-xs sm:text-sm text-slate-800 dark:text-slate-100';
-          const indentClass = it.kind === 'section' ? 'pl-5' : 'pl-0';
-          return (
-            <div key={it.key} className={`flex items-baseline ${indentClass}`}>
-              {it.href ? (
-                <a
-                  href={it.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`min-w-0 truncate ${titleClass} hover:underline underline-offset-2`}
-                  title={`${it.title} (PDF page ${Number(it.page) + PDF_PAGE_OFFSET})`}
-                >
-                  {it.title}
-                </a>
-              ) : (
-                <span className={`min-w-0 truncate ${titleClass}`} title={it.title}>
-                  {it.title}
-                </span>
-              )}
-              {it.page ? (
-                <>
-                  <span
-                    aria-hidden
-                    className="mx-2 flex-1 border-b border-dotted border-slate-400/80 dark:border-slate-500/80 translate-y-[-2px]"
-                  />
-                  <span className="tabular-nums text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                    {it.page}
-                  </span>
-                </>
-              ) : null}
-            </div>
-          );
-        })}
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] font-semibold text-orange-500 dark:text-orange-300">
+              Social announcement
+            </p>
+
+            <h4 className="mt-1 text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">
+              Follow the public discussion on X
+            </h4>
+          </div>
+
+          <a
+            href={postUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          >
+            Open on X
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+
+        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          A live embedded preview of the announcement post is shown below. If the
+          X widget is blocked by your browser, the button above opens the post directly.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:p-4 shadow-md">
+        <div className="mx-auto max-w-[560px]">
+          <blockquote
+            className="twitter-tweet"
+            data-dnt="true"
+            data-conversation="none"
+            data-align="center"
+            data-theme="light"
+          >
+            <a href={postUrl}>View the announcement post on X</a>
+          </blockquote>
+        </div>
       </div>
     </div>
   );
@@ -265,100 +242,6 @@ const tabsRow2: Tab[] = [
   };
 
   // TOC blocks
-  const tocAB = `A Introduction to Deep Generative Modeling 14
-1 Deep Generative Modeling 15
-1.1 What is Deep Generative Modeling? . . . . . . . . . . . . . . . 16
-1.2 Prominent Deep Generative Models . . . . . . . . . . . . . . . 22
-1.3 Taxonomy of Modelings . . . . . . . . . . . . . . . . . . . . . . 26
-1.4 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 28
-B Origins and Foundations of Diffusion Models 30
-2 Variational Perspective: From VAEs to DDPMs 32
-2.1 Variational Autoencoder . . . . . . . . . . . . . . . . . . . . . . 33
-2.2 Variational Perspective: DDPM . . . . . . . . . . . . . . . . . . 43
-2.3 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 55
-3 Score-Based Perspective: From EBMs to NCSN 56
-3.1 Energy-Based Models . . . . . . . . . . . . . . . . . . . . . . . . 57
-3.2 From Energy-Based to Score-Based Generative Models . . . . . 64
-3.3 Denoising Score Matching . . . . . . . . . . . . . . . . . . . . . 68
-3.4 Multi-Noise Levels of Denoising Score Matching (NCSN) . . . . 79
-3.5 Summary: A Comparative View of NCSN and DDPM . . . . . . 84
-3.6 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 85
-4 Diffusion Models Today: Score SDE Framework 86
-4.1 Score SDE: Its Principles . . . . . . . . . . . . . . . . . . . . . . 87
-4.2 Score SDE: Its Training and Sampling . . . . . . . . . . . . . . 105
-4.3 Instantiations of SDEs . . . . . . . . . . . . . . . . . . . . . . . 110
-4.4 (Optional) Rethinking Forward Kernels in Score-Based and Variational Diffusion Models . . . . . . . . . . . . . . . . . . . . . . 115
-4.5 (Optional) Fokker–Planck Equation and Reverse-Time SDEs via Marginalization and Bayes' Rule . . . . . . . . . . . . . . . 121
-4.6 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 126
-5 Flow-Based Perspective: From NFs to Flow Matching 127
-5.1 Flow-Based Models: Normalizing Flows and Neural ODEs . . . . 129
-5.2 Flow Matching Framework . . . . . . . . . . . . . . . . . . . . . 136
-5.3 Constructing Probability Paths and Velocities Between Distributions148
-5.4 (Optional) Properties of the Canonical Affine Flow . . . . . . . 159
-5.5 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 165
-6 A Unified and Systematic Lens on Diffusion Models 166
-6.1 Conditional Tricks: The Secret Sauce of Diffusion Models . . . . 168
-6.2 A Roadmap for Elucidating Training Losses in Diffusion Models 170
-6.3 Equivalence in Diffusion Models . . . . . . . . . . . . . . . . . 175
-6.4 Beneath It All: The Fokker–Planck Equation . . . . . . . . . . . 186
-6.5 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 190
-7 (Optional) Diffusion Models and Optimal Transport 191
-7.1 Prologue of Distribution-to-Distribution Translation . . . . . . . 192
-7.2 Taxonomy of the Problem Setups . . . . . . . . . . . . . . . . . 194
-7.3 Relationship of Variant Optimal Transport Formulations . . . . . 206
-7.4 Is Diffusion Model's SDE Optimal Solution to SB Problem? . . 212
-7.5 Is Diffusion Model's ODE an Optimal Map to OT Problem? . . 216`;
-
-  const tocCD = `C Sampling of Diffusion Models 224
-8 Guidance and Controllable Generation 226
-8.1 Prologue . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 227
-8.2 Classifier Guidance . . . . . . . . . . . . . . . . . . . . . . . . . 232
-8.3 Classifier-Free Guidance . . . . . . . . . . . . . . . . . . . . . . 235
-8.4 (Optional) Training-Free Guidance . . . . . . . . . . . . . . . . 238
-8.5 From Reinforcement Learning to Direct Preference Optimization for Model Alignment . . . . . . . . . . . . . . . . . . . . . . . . 243
-8.6 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 253
-9 Sophisticated Solvers for Fast Sampling 254
-9.1 Prologue . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 255
-9.2 DDIM . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 263
-9.3 DEIS . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 275
-9.4 DPM-Solver . . . . . . . . . . . . . . . . . . . . . . . . . . . . 282
-9.5 DPM-Solver++ . . . . . . . . . . . . . . . . . . . . . . . . . . . 295
-9.6 PF-ODE Solver Families and Their Numerical Analogues . . . . 301
-9.7 (Optional) DPM-Solver-v3 . . . . . . . . . . . . . . . . . . . . 304
-9.8 (Optional) ParaDiGMs . . . . . . . . . . . . . . . . . . . . . . . 315
-9.9 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 321
-D Toward Learning Fast Diffusion-Based Generators 322
-10 Distillation-Based Methods for Fast Sampling 323
-10.1 Prologue . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 324
-10.2 Distribution-Based Distillation . . . . . . . . . . . . . . . . . . 329
-10.3 Progressive Distillation . . . . . . . . . . . . . . . . . . . . . . 334
-10.4 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 340
-11 Learning Fast Generators from Scratch 341
-11.1 Prologue . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 343
-11.2 Special Flow Map: Consistency Model in Discrete Time . . . . . 348
-11.3 Special Flow Map: Consistency Model in Continuous Time . . . 356
-11.4 General Flow Map: Consistency Trajectory Model . . . . . . . . 365
-11.5 General Flow Map: Mean Flow . . . . . . . . . . . . . . . . . . 375
-11.6 Closing Remarks . . . . . . . . . . . . . . . . . . . . . . . . . . 380`;
-
-  const tocApp = `Appendices 381
-A Crash Course on Differential Equations 382
-A.1 Foundation of Ordinary Differential Equations . . . . . . . . . . 383
-A.2 Foundation of Stochastic Differential Equations . . . . . . . . . 394
-B Density Evolution: From Change of Variable to Fokker–Planck 398
-B.1 Change-of-Variable Formula: From Deterministic Maps to Stochastic Flows . . . . . . . 399
-B.2 Intuition of the Continuity Equation . . . . . . . . . . . . . . . 409
-C Behind the Scenes of Diffusion Models: Itô's Calculus and Girsanov's Theorem 412
-C.1 Itô's Formula: The Chain Rule for Random Processes . . . . . . 413
-C.2 Change-of-Variable For Measures: Girsanov's Theorem in Diffusion Models . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 422
-D Supplementary Materials and Proofs 426
-D.1 Variational Perspective . . . . . . . . . . . . . . . . . . . . . . . 426
-D.2 Score-Based Perspective . . . . . . . . . . . . . . . . . . . . . . 430
-D.3 Flow-Based Perspective . . . . . . . . . . . . . . . . . . . . . . 441
-D.4 Theoretical Supplement: A Unified and Systematic View on Diffusion Models . . . . . . . . . . . . . . . . . . . . . . . . . . . . 445
-D.5 Theoretical Supplement: Learning Fast Diffusion-Based Generators 446
-D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
-
   const aboutSlides: Array<{
     heading: string;
     body: JSX.Element;
@@ -376,6 +259,7 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             in the opposite direction, transforming noise into data while recovering the same intermediate distributions
             defined by the forward corruption process.
           </p>
+
           <p>
             We describe three complementary ways to formalize this idea. The variational view, inspired by variational autoencoders,
             sees diffusion as learning to remove noise step by step, solving small denoising objectives that together teach the model
@@ -383,12 +267,15 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
             data distribution, which indicates how to nudge samples toward more likely regions. The flow-based view, related to
             normalizing flows, treats generation as following a smooth path that moves samples from noise to data under a learned velocity field.
           </p>
+
           <p>
-            These perspectives share a common backbone: a learned time-dependent velocity field whose flow transports a simple prior to the data.
-            With this in hand, sampling amounts to solving a differential equation that evolves noise into data along a continuous generative trajectory.
-            On this foundation, the monograph discusses guidance (controllable generation), advanced numerical solvers (efficient sampling),
-            and diffusion-motivated flow-map models (direct mappings between arbitrary times along this trajectory).
+            These perspectives share a common backbone: a learned time-dependent velocity field whose flow transports
+            a simple prior to the data. With this in hand, sampling amounts to solving a differential equation that evolves
+            noise into data along a continuous generative trajectory. On this foundation, the monograph discusses guidance
+            — controllable generation — advanced numerical solvers — efficient sampling — and diffusion-motivated flow-map
+            models — direct mappings between arbitrary times along this trajectory.
           </p>
+
           <p>
             This monograph is written for readers with a basic deep learning background who seek a clear, conceptual,
             and mathematically grounded understanding of diffusion models. It clarifies the theoretical foundations,
@@ -397,9 +284,10 @@ D.6 (Optional) Elucidating Diffusion Model (EDM) . . . . . . . . . 450`;
         </div>
       ),
     },
-    { heading: 'Table of Contents: Parts A–B', body: <TocBlock text={tocAB} /> },
-    { heading: 'Table of Contents: Parts C–D', body: <TocBlock text={tocCD} /> },
-    { heading: 'Appendix: Crash Courses & Proofs', body: <TocBlock text={tocApp} /> },
+    {
+      heading: 'Announcement: Social Media Post',
+      body: <XPostPreview />,
+    },
   ];
 
   const goAbout = (i: number) => {
