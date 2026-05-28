@@ -1069,13 +1069,12 @@ export default function BlogPost() {
                   />
                 </div>
               
-                <figcaption className="mt-3 text-center text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                  Conditional flow matching gives one clean velocity label after conditioning on the target mode.
-                  Marginal flow matching must average all plausible conditional directions at the same{' '}
-                  <code className="font-mono">(x_t,t)</code>, which can point between modes or shrink when
-                  directions cancel.
-                </figcaption>
-              </figure>
+              <InteractivePanel
+                id="interactive-conditional-vs-marginal-velocity-fields"
+                title="Conditional vs Marginal Velocity Fields"
+                src={`${import.meta.env.BASE_URL}assets/conditional_vs_marginal_flow_matching_velocity.html`}
+                height="820px"
+              />
               
               <p className="leading-relaxed text-slate-700 dark:text-slate-300 mt-4">
                 Before we move on, we stress one subtle but important point. In <em>Flow Matching</em> and <em>Rectified Flow</em>, the noise scheduler choice <InlineMath math="\mathbf{x}_t = (1-t)\,\mathbf{x}_0 + t\,\boldsymbol{\epsilon}" /> means that, for a <em>fixed pair</em> <InlineMath math="(\mathbf{x}_0, \boldsymbol{\epsilon})" />, the sample travels along a perfectly straight line from data to noise. In other words, the <em>conditional path</em> is linear, and the conditional velocity is just the constant <InlineMath math="\boldsymbol{\epsilon} - \mathbf{x}_0" />, pointing from <InlineMath math="\mathbf{x}_0" /> toward <InlineMath math="\boldsymbol{\epsilon}" />.
