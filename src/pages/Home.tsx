@@ -513,6 +513,28 @@ return (
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-orange-500">
               <div className="flex items-start justify-between mb-2">
                 <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                  Version 3 Now on arXiv
+                </span>
+              </div>
+            
+              <p className="text-slate-700 dark:text-slate-300">
+                Our latest v3 is now on{" "}
+                <a
+                  href="https://arxiv.org/abs/2510.21890"
+                  className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 underline underline-offset-2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  arXiv
+                </a>
+                {" "}— ✨ new <strong>“Road Ahead”</strong> chapter on discrete diffusion
+                {" "}· 🛠️ major restructuring, including a dedicated diffusion solvers chapter
+                {" "}· 🧭 reader guides for every chapter.
+              </p>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-orange-500">
+              <div className="flex items-start justify-between mb-2">
+                <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
                   Coming Soon from MIT Press, 2027
                 </span>
               </div>
