@@ -528,8 +528,8 @@ return (
                   arXiv
                 </a>
                 {" "}— ✨ new <strong>“Road Ahead”</strong> chapter on discrete diffusion
-                {" "}· 🛠️ major restructuring, including a dedicated diffusion solvers chapter
-                {" "}· 🧭 reader guides for every chapter.
+                {" "}· 🛠️ major restructuring, including a revised diffusion solvers chapter
+                {" "}· 🧭 <strong>“reader guides”</strong> for every chapter.
               </p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 border-l-4 border-orange-500">
