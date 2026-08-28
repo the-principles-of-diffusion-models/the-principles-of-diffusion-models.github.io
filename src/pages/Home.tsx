@@ -527,7 +527,7 @@ return (
                 >
                   arXiv
                 </a>
-                {" "}— ✨ new <strong>“Road Ahead”</strong> chapter on discrete diffusion
+                {" "}— ✨ new “Road Ahead” chapter on <strong>discrete diffusion</strong>
                 {" "}· 🛠️ major restructuring, including a revised diffusion solvers chapter
                 {" "}· 🧭 <strong>“reader guides”</strong> for every chapter.
               </p>
